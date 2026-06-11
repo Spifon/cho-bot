@@ -15,8 +15,8 @@ import asyncio
    def run_flask():
        app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
 
-   BOT_TOKEN = os.environ.get("BOT_TOKEN")
-   OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
+   BOT_TOKEN = os.environ.get("8817686114:AAH_GKD77SbUoNpHreA1ptsZU7AEAjAVfEc")
+   OPENROUTER_API_KEY = os.environ.get("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")
 
    bot = Bot(token=BOT_TOKEN)
    dp = Dispatcher()
