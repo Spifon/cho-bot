@@ -46,7 +46,7 @@ async def chat(message: types.Message):
     
     try:
         response = client.chat.completions.create(
-            model="meta-llama/llama-3.1-8b-instruct:free",
+            model="meta-llama/llama-3-8b-instruct",  # ИСПРАВЛЕНО!
             messages=history[user_id],
             max_tokens=500
         )
@@ -63,9 +63,6 @@ def run_flask():
     app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
-    # Flask в ФОНЕ (держит порт для Render)
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-    
-    # Бот в ГЛАВНОМ потоке (asyncio так любит!)
     asyncio.run(dp.start_polling(bot))
