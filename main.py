@@ -17,7 +17,7 @@ chat_history = {}
 CREATORS = {"prostotponyatno": "Otets", "jojlolaxyu": "Mat"}
 KEYWORDS = ["cho второй", "cho 2", "сын мой", "сынок", "сыночка", "chos", "чос"]
 
-SYSTEM_PROMPT = "You are Cho Vtoroi. CRITICAL: Answer ONLY in Russian. Never English. Be brief 1-2 sentences. You can use humor and mild swearing."
+SYSTEM_PROMPT = "You are Cho Vtoroi. CRITICAL: Answer ONLY in Russian. Never English. Be brief 1-2 sentences."
 
 def get_user_prompt(username):
     if username and username.lower() in CREATORS:
@@ -47,9 +47,11 @@ async def cmd_start(message):
     await message.answer(answer)
 
 async def cmd_img(message):
-    prompt = message.text.replace("/img", "").strip()    if not prompt:
-        await message.answer("Napishi chto narisovat!")
+    text = message.text    parts = text.split(" ", 1)
+    if len(parts) < 2:
+        await message.answer("Napishi chto narisovat! Primer: /img kot")
         return
+    prompt = parts[1].strip()
     await message.answer("Risuyu...")
     try:
         encoded = urllib.parse.quote(prompt)
@@ -95,8 +97,8 @@ def index():
 def start_web():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
-
-if __name__ == "__main__":    register_handlers()
+if __name__ == "__main__":
+    register_handlers()
     t = threading.Thread(target=start_web, daemon=True)
     t.start()
     asyncio.run(dp.start_polling(bot))
