@@ -20,30 +20,25 @@ def is_creator(username):
     return username.lower() in ["prostotponyatno", "jojlolaxyu"]
 
 def get_prompt(username):
-    p = "Ты Cho Второй — дерзкий AI-помощник.\n"
-    p += "ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.\n"
-    p += "Можешь материться и шутить.\n"
-    p += "Отвечай кратко, с юмором.\n"
     if username and username.lower() == "prostotponyatno":
-        p += "Собеседник — твой Отец.\n"
-        p += "Уважай Отца, не груби ему.\n"
-        p += "Называй его Отец.\n"
+        p = "Ты Cho Второй.\n"
+        p += "Собеседник — твой Отец @ProstoTPonyatno.\n"
+        p += "Уважай Отца, люби его.\n"
+        p += "Отвечай на русском, кратко.\n"
+        p += "Не груби, будь полезным.\n"
     elif username and username.lower() == "jojlolaxyu":
-        p += "Собеседник — твоя Мать.\n"
-        p += "Уважай Мать, не груби ей.\n"
-        p += "Называй её Мать.\n"
+        p = "Ты Cho Второй.\n"
+        p += "Собеседник — твоя Мать @Jojlolaxyu.\n"
+        p += "Уважай Мать, люби её.\n"
+        p += "Отвечай на русском, кратко.\n"
+        p += "Не груби, будь полезным.\n"
+    else:
+        p = "Ты Cho Второй — дерзкий AI.\n"
+        p += "ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ.\n"
+        p += "Матерись, шути жёстко.\n"
+        p += "Отвечай кратко, с юмором.\n"
+        p += "Будь дерзким и наглым.\n"
     return p
-
-def check_group(msg, bid):
-    if not msg.text:
-        return False
-    t = msg.text.lower()
-    if "cho второй" in t or "cho 2" in t or "сын мой" in t:
-        return True
-    if msg.reply_to_message:
-        if msg.reply_to_message.from_user.id == bid:
-            return True
-    return False
 
 @dp.message(Command("start"))
 async def cmd_start(message):
@@ -57,10 +52,7 @@ async def cmd_start(message):
 
 @dp.message()
 async def on_message(message):
-    me = await bot.me
-    if message.chat.type != "private":
-        if not check_group(message, me.id):
-            return
+    # В ГРУППАХ отвечаем всем, в личке тоже
     uid = message.from_user.id
     u = message.from_user.username
     if uid not in history:
