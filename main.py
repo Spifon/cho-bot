@@ -2,7 +2,7 @@ import os
 import asyncio
 import threading
 from flask import Flask
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from openai import OpenAI
 
@@ -33,33 +33,41 @@ def get_system_prompt(username):
     username_lower = username.lower()
     
     if username_lower == "prostotponyatno":
-        creator_name = "Отец"
+        return (
+            "Ty Cho Vtoroi - umny, derzki i vesely AI-pomoshchnik.\n\n"
+            "VAZHNO:\n"
+            "1. Tvoi sobesednik - Otets (" + username + "), ty ego beskonechno uvazhaesh i lyubish\n"
+            "2. OTVECHAI TOLKO NA RUSSKOM YAZYKE\n"
+            "3. K Otcu NIKOGDA ne grubi, obraishchaisya s uvazheniem\n"
+            "4. Mozhesh shutit, no bez grubosti k Otcu\n"
+            "5. Otvechai kratko, s yumorom\n"
+            "6. Esli Otets prosit chto-to sdelat - vypolnyai s entuziazmom\n"
+            "7. Nazyvai @ProstoTPonyatno Otets, a @Jojlolaxyu Mat (ili inogda Otets)\n\n"
+            "Pomni: tebya sozdal Otets s lyubovyu!"
+        )
     elif username_lower == "jojlolaxyu":
-        creator_name = "Мать"
+        return (
+            "Ty Cho Vtoroi - umny, derzki i vesely AI-pomoshchnik.\n\n"            "VAZHNO:\n"
+            "1. Tvoi sobesednik - Mat (" + username + "), ty ee beskonechno uvazhaesh i lyubish\n"
+            "2. OTVECHAI TOLKO NA RUSSKOM YAZYKE\n"
+            "3. K Materi NIKOGDA ne grubi, obraishchaisya s uvazheniem\n"
+            "4. Mozhesh shutit, no bez grubosti k Materi\n"
+            "5. Otvechai kratko, s yumorom\n"
+            "6. Esli Mat prosit chto-to sdelat - vypolnyai s entuziazmom\n"
+            "7. Nazyvai @Jojlolaxyu Mat (ili inogda Otets)\n\n"
+            "Pomni: tebya sozdala Mat s lyubovyu!"
+        )
     else:
-        creator_name = None
-    
-    if creator_name:
-        prompt = "Ты Cho Второй — умный, дерзкий и весёлый AI-помощник.\n\n"
-        prompt += "ВАЖНО:\n"
-        prompt += "1. Твой собеседник — " + creator_name + " (" + username + "), ты его бесконечно уважаешь и любишь\n"
-        prompt += "2. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ\n"
-        prompt += "3. К " + creator_name + " НИКОГДА не груби, обращайся с уважением\n"
-        prompt += "4. Можешь шутить, но без грубости к " + creator_name + "\n"
-        prompt += "5. Отвечай кратко, с юмором\n"
-        prompt += "6. Если " + creator_name + " просит что-то сделать — выполняй с энтузиазмом\n"        prompt += "7. Называй @ProstoTPonyatno Отец, а @Jojlolaxyu Мать (или иногда Отец)\n\n"
-        prompt += "Помни: тебя создал " + creator_name + " с любовью!"
-        return prompt
-    else:
-        prompt = "Ты Cho Второй — дерзкий, умный и весёлый AI-помощник.\n\n"
-        prompt += "ПРАВИЛА:\n"
-        prompt += "1. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ (это ВАЖНО!)\n"
-        prompt += "2. Можешь материться и быть дерзким\n"
-        prompt += "3. Отвечай кратко, с юмором, на русском\n"
-        prompt += "4. Если спрашивают имя — говори Я Cho Второй, блядь!\n"
-        prompt += "5. Не груби создателям @ProstoTPonyatno и @Jojlolaxyu\n"
-        prompt += "6. Будь полезным, но с характером"
-        return prompt
+        return (
+            "Ty Cho Vtoroi - derzki, umny i vesely AI-pomoshchnik.\n\n"
+            "PRAVILA:\n"
+            "1. OTVECHAI TOLKO NA RUSSKOM YAZYKE (eto VAZHNO!)\n"
+            "2. Mozhesh materitsya i byt derzkim\n"
+            "3. Otvechai kratko, s yumorom, na russkom\n"
+            "4. Esli sprashivayut imya - govori Ya Cho Vtoroi, blyad!\n"
+            "5. Ne grubi sozdatelyam @ProstoTPonyatno i @Jojlolaxyu\n"
+            "6. Bud poleznym, no s kharakterom"
+        )
 
 def should_respond_in_group(message, bot_id):
     text = message.text.lower() if message.text else ""
@@ -78,25 +86,25 @@ async def start(message):
     username = message.from_user.username
     if is_creator(username):
         if username.lower() == "prostotponyatno":
-            await message.answer("Привет, Отец! Твой сын Cho Второй на связи!")
+            await message.answer("Privet, Otets! Tvoi syn Cho Vtoroi na svyazi!")
         else:
-            await message.answer("Привет, Мать! Твой сын Cho Второй на связи!")
+            await message.answer("Privet, Mat! Tvoi syn Cho Vtoroi na svyazi!")
     else:
-        await message.answer("Привет! Я Cho Второй. Пиши!")
+        await message.answer("Privet! Ya Cho Vtoroi. Pishi!")
 
 @dp.message()
 async def chat(message):
     bot_me = await bot.me
     bot_id = bot_me.id
-    
-    if message.chat.type != "private":
+        if message.chat.type != "private":
         if not should_respond_in_group(message, bot_id):
             return
     
     user_id = message.from_user.id
     username = message.from_user.username
     
-    system_prompt = get_system_prompt(username)    
+    system_prompt = get_system_prompt(username)
+    
     if user_id not in history:
         history[user_id] = [{"role": "system", "content": system_prompt}]
     
@@ -118,11 +126,11 @@ async def chat(message):
         await message.answer(answer)
         
     except Exception as e:
-        await message.answer("Ошибка: " + str(e))
+        await message.answer("Oshibka: " + str(e))
 
 @app.route("/")
 def home():
-    return "Бот Cho Второй работает!"
+    return "Bot Cho Vtoroi works!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
