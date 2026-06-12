@@ -20,19 +20,25 @@ def is_creator(username):
     return username.lower() in ["prostotponyatno", "jojlolaxyu"]
 
 def get_prompt(username):
-    base = "Ty Cho Vtoroi. "
+    p = "Ты Cho Второй — дерзкий AI-помощник.\n"
+    p += "ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ.\n"
+    p += "Можешь материться и шутить.\n"
+    p += "Отвечай кратко, с юмором.\n"
     if username and username.lower() == "prostotponyatno":
-        base += "Sobesednik Otets. Uvazhai Otca. "
+        p += "Собеседник — твой Отец.\n"
+        p += "Уважай Отца, не груби ему.\n"
+        p += "Называй его Отец.\n"
     elif username and username.lower() == "jojlolaxyu":
-        base += "Sobesednik Mat. Uvazhai Mat. "
-    base += "Otvechai na russkom. Bud kratkim."
-    return base
+        p += "Собеседник — твоя Мать.\n"
+        p += "Уважай Мать, не груби ей.\n"
+        p += "Называй её Мать.\n"
+    return p
 
 def check_group(msg, bid):
     if not msg.text:
         return False
     t = msg.text.lower()
-    if "cho vtoroi" in t or "cho 2" in t or "syn moi" in t:
+    if "cho второй" in t or "cho 2" in t or "сын мой" in t:
         return True
     if msg.reply_to_message:
         if msg.reply_to_message.from_user.id == bid:
@@ -43,11 +49,11 @@ def check_group(msg, bid):
 async def cmd_start(message):
     u = message.from_user.username
     if u and u.lower() == "prostotponyatno":
-        await message.answer("Privet Otets!")
+        await message.answer("Привет, Отец! Твой сын Cho Второй на связи!")
     elif u and u.lower() == "jojlolaxyu":
-        await message.answer("Privet Mat!")
+        await message.answer("Привет, Мать! Твой сын Cho Второй на связи!")
     else:
-        await message.answer("Privet!")
+        await message.answer("Привет! Я Cho Второй. Пиши!")
 
 @dp.message()
 async def on_message(message):
@@ -63,12 +69,16 @@ async def on_message(message):
     if len(history[uid]) > 10:
         history[uid] = [history[uid][0]] + history[uid][-9:]
     try:
-        r = client.chat.completions.create(model="meta-llama/llama-3-8b-instruct", messages=history[uid], max_tokens=500)
+        r = client.chat.completions.create(
+            model="meta-llama/llama-3-8b-instruct",
+            messages=history[uid],
+            max_tokens=500
+        )
         ans = r.choices[0].message.content
         history[uid].append({"role": "assistant", "content": ans})
         await message.answer(ans)
     except Exception as ex:
-        await message.answer("Error: " + str(ex))
+        await message.answer("Ошибка: " + str(ex))
 
 @app.route("/")
 def index():
