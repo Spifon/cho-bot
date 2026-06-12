@@ -6,18 +6,16 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from openai import OpenAI
 
-# Flask — ГЛАВНЫЙ процесс (держит порт для Render)
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Бот Cho Второй работает, блядь!"
+    return "Бот Cho Второй работает!"
 
 @app.route('/health')
 def health():
     return "OK"
 
-# Настройки бота
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
@@ -30,13 +28,12 @@ client = OpenAI(
 
 history = {}
 
-SYSTEM_PROMPT = """Ты Cho Второй — дерзкий и весёлый помощник. 
-Можешь материться, шутить жёстко. Отвечай кратко, с юмором, на русском.
-Если спрашивают имя — говори "Я Cho Второй, блядь!"."""
+SYSTEM_PROMPT = """Ты Cho Второй — дерзкий помощник. 
+Можешь материться, шутить жёстко. Отвечай кратко, с юмором, на русском."""
 
 @dp.message(Command("start"))
 async def start(message: types.Message):
-    await message.answer("Привет! 👋 Я Cho Второй. Пиши, блядь!")
+    await message.answer("Привет! 👋 Я Cho Второй. Пиши!")
 
 @dp.message()
 async def chat(message: types.Message):
@@ -59,26 +56,21 @@ async def chat(message: types.Message):
         
         answer = response.choices[0].message.content
         history[user_id].append({"role": "assistant", "content": answer})
-        
         await message.answer(answer)
         
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
 
-async def run_bot():
-    print("✅ Бот Cho Второй запущен, блядь!")
-    await dp.start_polling(bot)
-
-def start_bot_thread():
+def run_bot():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(run_bot())
+    loop.run_until_complete(dp.start_polling(bot))
 
-# Запускаем бота в фоновом потоке
-bot_thread = threading.Thread(target=start_bot_thread, daemon=True)
-bot_thread.start()
-
-# Flask — ГЛАВНЫЙ процесс (держит порт для Render)
 if __name__ == "__main__":
+    # Запускаем бота в фоне
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
+    # Запускаем Flask НА ВСЕХ ИНТЕРФЕЙСАХ
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, threaded=True)
