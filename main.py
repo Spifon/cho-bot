@@ -17,14 +17,13 @@ chat_history = {}
 CREATORS = {"prostotponyatno": "Otets", "jojlolaxyu": "Mat"}
 KEYWORDS = ["cho второй", "cho 2", "сын мой", "сынок", "сыночка", "chos", "чос"]
 
-def get_system_prompt():
-    return "Ty Cho Vtoroi - derzki AI. Otvechai TOLKO na russkom. Bud kratkim."
+SYSTEM_PROMPT = "You are Cho Vtoroi, a cheeky AI assistant. CRITICAL RULE: You MUST respond ONLY in Russian language. Never use English. Be brief (1-2 sentences). You can use mild swearing and humor. Never write nonsense."
 
 def get_user_prompt(username):
     if username and username.lower() in CREATORS:
         role = CREATORS[username.lower()]
-        return f"SOBESEDIK - tvoj {role}. Uvazhai ego."
-    return "SOBESEDIK - obychnyj. Otvechai derzko."
+        return f"Your conversation partner is your {role} (@{username}). Respect them. Never be rude to them."
+    return "Your conversation partner is a regular user. Be cheeky and bold."
 
 def should_respond(message, bot_id):
     if message.chat.type == "private":
@@ -41,25 +40,25 @@ def should_respond(message, bot_id):
 @dp.message(Command("start"))
 async def cmd_start(message):
     u = message.from_user.username
-    answer = "Privet! Ya Cho Vtoroi."
+    answer = "Привет! Я Cho Второй."
     if u and u.lower() == "prostotponyatno":
-        answer = "Privet Otets!"
+        answer = "Привет, Отец!"
     if u and u.lower() == "jojlolaxyu":
-        answer = "Privet Mat!"
+        answer = "Привет, Мать!"
     await message.answer(answer)
-@dp.message(Command("img"))
-async def cmd_img(message):
+
+@dp.message(Command("img"))async def cmd_img(message):
     prompt = message.text.replace("/img", "").strip()
     if not prompt:
-        await message.answer("Napishi chto narisovat!")
+        await message.answer("Напиши что нарисовать!")
         return
-    await message.answer("Risuyu...")
+    await message.answer("Рисую...")
     try:
         encoded = urllib.parse.quote(prompt)
         img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024"
-        await message.answer_photo(photo=img_url, caption=f"Gotovo: {prompt}")
+        await message.answer_photo(photo=img_url, caption=f"Держи: {prompt}")
     except Exception as e:
-        await message.answer(f"Ne vyshlo!")
+        await message.answer(f"Не вышло!")
 
 @dp.message()
 async def on_message(message):
@@ -71,10 +70,8 @@ async def on_message(message):
     username = message.from_user.username
     if chat_id not in chat_history:
         chat_history[chat_id] = []
-    system_prompt = get_system_prompt()
-    user_prompt = get_user_prompt(username)
-    messages = [{"role": "system", "content": system_prompt}]
-    messages.append({"role": "system", "content": user_prompt})
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.append({"role": "system", "content": get_user_prompt(username)})
     if chat_history[chat_id]:
         messages.extend(chat_history[chat_id][-3:])
     messages.append({"role": "user", "content": message.text})
@@ -87,7 +84,7 @@ async def on_message(message):
             chat_history[chat_id] = chat_history[chat_id][-6:]
         await message.answer(ans)
     except Exception as ex:
-        await message.answer("Oshibka")
+        await message.answer("Ошибка")
 
 @app.route("/")
 def index():
@@ -96,7 +93,7 @@ def index():
 def start_web():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 if __name__ == "__main__":
     t = threading.Thread(target=start_web, daemon=True)
-    t.start()
-    asyncio.run(dp.start_polling(bot))
+    t.start()    asyncio.run(dp.start_polling(bot))
