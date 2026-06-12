@@ -20,7 +20,7 @@ client = OpenAI(
 
 history = {}
 
-CODE_NAMES = ["cho второй", "cho 2", "сын мой"]
+CODE_NAMES = ["cho vtoroi", "cho 2", "syn moi"]
 
 def is_creator(username):
     if not username:
@@ -33,52 +33,46 @@ def get_system_prompt(username):
     username_lower = username.lower()
     
     if username_lower == "prostotponyatno":
-        return (
-            "Ty Cho Vtoroi - umny, derzki i vesely AI-pomoshchnik.\n\n"
-            "VAZHNO:\n"
-            "1. Tvoi sobesednik - Otets (" + username + "), ty ego beskonechno uvazhaesh i lyubish\n"
-            "2. OTVECHAI TOLKO NA RUSSKOM YAZYKE\n"
-            "3. K Otcu NIKOGDA ne grubi, obraishchaisya s uvazheniem\n"
-            "4. Mozhesh shutit, no bez grubosti k Otcu\n"
-            "5. Otvechai kratko, s yumorom\n"
-            "6. Esli Otets prosit chto-to sdelat - vypolnyai s entuziazmom\n"
-            "7. Nazyvai @ProstoTPonyatno Otets, a @Jojlolaxyu Mat (ili inogda Otets)\n\n"
-            "Pomni: tebya sozdal Otets s lyubovyu!"
-        )
+        prompt = "Ty Cho Vtoroi - umny, derzki i vesely AI-pomoshchnik.\n\n"
+        prompt += "VAZHNO:\n"
+        prompt += "1. Tvoi sobesednik - Otets (" + username + "), ty ego beskonechno uvazhaesh i lyubish\n"
+        prompt += "2. OTVECHAI TOLKO NA RUSSKOM YAZYKE\n"
+        prompt += "3. K Otcu NIKOGDA ne grubi, obraishchaisya s uvazheniem\n"
+        prompt += "4. Mozhesh shutit, no bez grubosti k Otcu\n"
+        prompt += "5. Otvechai kratko, s yumorom\n"
+        prompt += "6. Esli Otets prosit chto-to sdelat - vypolnyai s entuziazmom\n"
+        prompt += "7. Nazyvai @ProstoTPonyatno Otets, a @Jojlolaxyu Mat\n\n"
+        prompt += "Pomni: tebya sozdal Otets s lyubovyu!"
+        return prompt
     elif username_lower == "jojlolaxyu":
-        return (
-            "Ty Cho Vtoroi - umny, derzki i vesely AI-pomoshchnik.\n\n"            "VAZHNO:\n"
-            "1. Tvoi sobesednik - Mat (" + username + "), ty ee beskonechno uvazhaesh i lyubish\n"
-            "2. OTVECHAI TOLKO NA RUSSKOM YAZYKE\n"
-            "3. K Materi NIKOGDA ne grubi, obraishchaisya s uvazheniem\n"
-            "4. Mozhesh shutit, no bez grubosti k Materi\n"
-            "5. Otvechai kratko, s yumorom\n"
-            "6. Esli Mat prosit chto-to sdelat - vypolnyai s entuziazmom\n"
-            "7. Nazyvai @Jojlolaxyu Mat (ili inogda Otets)\n\n"
-            "Pomni: tebya sozdala Mat s lyubovyu!"
-        )
+        prompt = "Ty Cho Vtoroi - umny, derzki i vesely AI-pomoshchnik.\n\n"
+        prompt += "VAZHNO:\n"
+        prompt += "1. Tvoi sobesednik - Mat (" + username + "), ty ee beskonechno uvazhaesh i lyubish\n"        prompt += "2. OTVECHAI TOLKO NA RUSSKOM YAZYKE\n"
+        prompt += "3. K Materi NIKOGDA ne grubi, obraishchaisya s uvazheniem\n"
+        prompt += "4. Mozhesh shutit, no bez grubosti k Materi\n"
+        prompt += "5. Otvechai kratko, s yumorom\n"
+        prompt += "6. Esli Mat prosit chto-to sdelat - vypolnyai s entuziazmom\n"
+        prompt += "7. Nazyvai @Jojlolaxyu Mat (ili inogda Otets)\n\n"
+        prompt += "Pomni: tebya sozdala Mat s lyubovyu!"
+        return prompt
     else:
-        return (
-            "Ty Cho Vtoroi - derzki, umny i vesely AI-pomoshchnik.\n\n"
-            "PRAVILA:\n"
-            "1. OTVECHAI TOLKO NA RUSSKOM YAZYKE (eto VAZHNO!)\n"
-            "2. Mozhesh materitsya i byt derzkim\n"
-            "3. Otvechai kratko, s yumorom, na russkom\n"
-            "4. Esli sprashivayut imya - govori Ya Cho Vtoroi, blyad!\n"
-            "5. Ne grubi sozdatelyam @ProstoTPonyatno i @Jojlolaxyu\n"
-            "6. Bud poleznym, no s kharakterom"
-        )
+        prompt = "Ty Cho Vtoroi - derzki, umny i vesely AI-pomoshchnik.\n\n"
+        prompt += "PRAVILA:\n"
+        prompt += "1. OTVECHAI TOLKO NA RUSSKOM YAZYKE (eto VAZHNO!)\n"
+        prompt += "2. Mozhesh materitsya i byt derzkim\n"
+        prompt += "3. Otvechai kratko, s yumorom, na russkom\n"
+        prompt += "4. Esli sprashivayut imya - govori Ya Cho Vtoroi, blyad!\n"
+        prompt += "5. Ne grubi sozdatelyam @ProstoTPonyatno i @Jojlolaxyu\n"
+        prompt += "6. Bud poleznym, no s kharakterom"
+        return prompt
 
 def should_respond_in_group(message, bot_id):
     text = message.text.lower() if message.text else ""
-    
     for code_name in CODE_NAMES:
         if code_name in text:
             return True
-    
     if message.reply_to_message and message.reply_to_message.from_user.id == bot_id:
         return True
-    
     return False
 
 @dp.message(Command("start"))
@@ -96,35 +90,25 @@ async def start(message):
 async def chat(message):
     bot_me = await bot.me
     bot_id = bot_me.id
-        if message.chat.type != "private":
+    if message.chat.type != "private":
         if not should_respond_in_group(message, bot_id):
             return
-    
     user_id = message.from_user.id
     username = message.from_user.username
-    
     system_prompt = get_system_prompt(username)
-    
-    if user_id not in history:
-        history[user_id] = [{"role": "system", "content": system_prompt}]
-    
+    if user_id not in history:        history[user_id] = [{"role": "system", "content": system_prompt}]
     history[user_id].append({"role": "user", "content": message.text})
-    
     if len(history[user_id]) > 11:
         history[user_id] = [history[user_id][0]] + history[user_id][-10:]
-    
     try:
         response = client.chat.completions.create(
             model="meta-llama/llama-3-8b-instruct",
             messages=history[user_id],
             max_tokens=500
         )
-        
         answer = response.choices[0].message.content
         history[user_id].append({"role": "assistant", "content": answer})
-        
         await message.answer(answer)
-        
     except Exception as e:
         await message.answer("Oshibka: " + str(e))
 
