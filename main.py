@@ -1,20 +1,21 @@
-import asyncio
 import os
+import asyncio
 import threading
 from flask import Flask
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from openai import OpenAI
 
-# Flask для Keep-Alive
+# Flask — ГЛАВНЫЙ процесс (держит порт для Render)
 app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Бот Cho Второй работает!"
+    return "Бот Cho Второй работает, блядь!"
 
-def run_flask():
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+@app.route('/health')
+def health():
+    return "OK"
 
 # Настройки бота
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
@@ -64,10 +65,20 @@ async def chat(message: types.Message):
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
 
-async def main():
-    threading.Thread(target=run_flask).start()
-    print("✅ Бот Cho Второй запущен на Python 3.14, блядь!")
+async def run_bot():
+    print("✅ Бот Cho Второй запущен, блядь!")
     await dp.start_polling(bot)
 
+def start_bot_thread():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(run_bot())
+
+# Запускаем бота в фоновом потоке
+bot_thread = threading.Thread(target=start_bot_thread, daemon=True)
+bot_thread.start()
+
+# Flask — ГЛАВНЫЙ процесс (держит порт для Render)
 if __name__ == "__main__":
-    asyncio.run(main())
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
