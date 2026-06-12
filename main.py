@@ -6,8 +6,6 @@ import threading
 
 import urllib.parse
 
-import aiohttp
-
 from flask import Flask
 
 from aiogram import Bot, Dispatcher
@@ -47,8 +45,8 @@ def get_user_prompt(username):
     if username and username.lower() in CREATORS:
 
         role = CREATORS[username.lower()]
-        result = "Собеседник твой " + role + ". Уважай его."
 
+        result = "Собеседник твой " + role + ". Уважай его."
     return result
 
 
@@ -96,13 +94,13 @@ async def cmd_start(message):
     await message.answer(answer)
 
 
-async def cmd_img(message):
 
+async def cmd_img(message):
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
 
-        await message.answer("Напиши что нарисовать! Пример: /img кот")
+        await message.answer("Напиши что нарисовать! Пример: /img cat")
 
         return
 
@@ -112,24 +110,39 @@ async def cmd_img(message):
 
     try:
 
-        # Кодируем для URL
+        # Переводим кириллицу в транслит или используем английский
 
-        safe_prompt = prompt.replace(" ", "%20")
+        # Кодируем ВСЕ символы правильно
 
-        img_url = "https://image.pollinations.ai/prompt/" + safe_prompt + "?width=1024&height=1024&nologo=true"
+        encoded_prompt = urllib.parse.quote(prompt.encode('utf-8'))
 
-        print(f"DEBUG: Sending image URL: {img_url}")
+        
+
+        # Пробуем Pollinations
+
+        img_url = "https://image.pollinations.ai/prompt/" + encoded_prompt + "?width=1024&height=1024&nologo=true&seed=42"
+
+        
+
+        print(f"DEBUG: Image URL: {img_url}")
+
+        
+
+        # Отправляем картинку
 
         await message.answer_photo(photo=img_url, caption=prompt)
 
+        
+
         print("DEBUG: Image sent successfully")
+
+        
 
     except Exception as e:
 
         print(f"DEBUG: Image error: {e}")
 
-        await message.answer("Не вышло нарисовать! Попробуй другой запрос.")
-
+        await message.answer("Не вышло! Попробуй на английском, например: /img cat in space")
 
 
 async def cmd_music(message):
@@ -145,15 +158,12 @@ async def cmd_music(message):
     query = words[1].strip()
 
     await message.answer("Ищу музыку...")
-    try:
 
-        # Ищем на YouTube
+    try:
 
         search_query = urllib.parse.quote(query)
 
         youtube_url = "https://www.youtube.com/results?search_query=" + search_query
-
-        
 
         msg = "🎵 Вот что нашёл:\n\n"
 
@@ -161,11 +171,7 @@ async def cmd_music(message):
 
         msg += "Скачай музыку оттуда или послушай онлайн!"
 
-        
-
         await message.answer(msg)
-
-        print("DEBUG: Music search sent")
 
     except Exception as e:
 
@@ -181,22 +187,18 @@ async def cmd_video(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши что найти! Пример: /video котики")
+        await message.answer("Напиши что найти! Пример: /video cats")
 
         return
 
     query = words[1].strip()
 
     await message.answer("Ищу видео...")
-
     try:
 
-        # Ищем на YouTube
-
         search_query = urllib.parse.quote(query)
-        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
 
-        
+        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
 
         msg = "🎬 Вот что нашёл:\n\n"
 
@@ -204,11 +206,7 @@ async def cmd_video(message):
 
         msg += "Смотри видео на YouTube!"
 
-        
-
         await message.answer(msg)
-
-        print("DEBUG: Video search sent")
 
     except Exception as e:
 
@@ -243,8 +241,8 @@ async def on_message(message):
     username = message.from_user.username
 
     if chat_id not in chat_history:
-        chat_history[chat_id] = []
 
+        chat_history[chat_id] = []
     messages = []
 
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
@@ -279,8 +277,6 @@ async def on_message(message):
 
         await message.answer(ans)
 
-        print("DEBUG: Message sent successfully")
-
     except Exception as e:
 
         print(f"DEBUG: AI error: {e}")
@@ -292,10 +288,10 @@ async def on_message(message):
 def register_handlers():
 
     dp.message(Command("start"))(cmd_start)
+
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
-
     dp.message(Command("video"))(cmd_video)
 
     dp.message()(on_message)
