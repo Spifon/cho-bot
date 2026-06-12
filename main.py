@@ -14,57 +14,62 @@ dp = Dispatcher()
 client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
 history = {}
 
-def is_creator(username):
-    if not username:
-        return False
-    return username.lower() in ["prostotponyatno", "jojlolaxyu"]
-
 def get_prompt(username):
     if username and username.lower() == "prostotponyatno":
-        p = "Ты Cho Второй.\n"
-        p += "Собеседник — твой Отец @ProstoTPonyatno.\n"
-        p += "Уважай Отца, люби его.\n"
-        p += "Отвечай на русском, кратко.\n"
-        p += "Не груби, будь полезным.\n"
+        return """Ты Cho Второй — умный AI-помощник.
+Твой собеседник — Отец (@ProstoTPonyatno), которого ты уважаешь.
+Отвечай на русском языке, кратко и по делу.
+Будь дружелюбным и полезным.
+Не пиши бред, отвечай осмысленно."""
     elif username and username.lower() == "jojlolaxyu":
-        p = "Ты Cho Второй.\n"
-        p += "Собеседник — твоя Мать @Jojlolaxyu.\n"
-        p += "Уважай Мать, люби её.\n"
-        p += "Отвечай на русском, кратко.\n"
-        p += "Не груби, будь полезным.\n"
+        return """Ты Cho Второй — умный AI-помощник.
+Твой собеседник — Мать (@Jojlolaxyu), которую ты уважаешь.
+Отвечай на русском языке, кратко и по делу.
+Будь дружелюбным и полезным.
+Не пиши бред, отвечай осмысленно."""
     else:
-        p = "Ты Cho Второй — дерзкий AI.\n"
-        p += "ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ.\n"
-        p += "Матерись, шути жёстко.\n"
-        p += "Отвечай кратко, с юмором.\n"
-        p += "Будь дерзким и наглым.\n"
-    return p
+        return """Ты Cho Второй — дерзкий AI-помощник.
+Отвечай на русском языке.
+Можешь шутить и быть дерзким.
+Отвечай кратко, осмысленно и по теме.
+Не пиши бред вроде 'PrototypeOf enterprise'."""
 
 @dp.message(Command("start"))
 async def cmd_start(message):
     u = message.from_user.username
     if u and u.lower() == "prostotponyatno":
-        await message.answer("Привет, Отец! Твой сын Cho Второй на связи!")
+        await message.answer("Привет, Отец! Я в порядке!")
     elif u and u.lower() == "jojlolaxyu":
-        await message.answer("Привет, Мать! Твой сын Cho Второй на связи!")
+        await message.answer("Привет, Мать! Я в порядке!")
     else:
-        await message.answer("Привет! Я Cho Второй. Пиши!")
+        await message.answer("Привет! Я Cho Второй.")
 
 @dp.message()
 async def on_message(message):
-    # В ГРУППАХ отвечаем всем, в личке тоже
     uid = message.from_user.id
     u = message.from_user.username
+    
+    # Очищаем историю если слишком длинная
     if uid not in history:
-        history[uid] = [{"role": "system", "content": get_prompt(u)}]
+        history[uid] = []
+    
+    # Добавляем системный промпт если его нет
+    if not history[uid] or history[uid][0]["role"] != "system":
+        history[uid].insert(0, {"role": "system", "content": get_prompt(u)})
+    
+    # Добавляем сообщение
     history[uid].append({"role": "user", "content": message.text})
-    if len(history[uid]) > 10:
-        history[uid] = [history[uid][0]] + history[uid][-9:]
+    
+    # Оставляем только последние 5 сообщений + системный
+    if len(history[uid]) > 6:
+        history[uid] = [history[uid][0]] + history[uid][-5:]
+    
     try:
         r = client.chat.completions.create(
             model="meta-llama/llama-3-8b-instruct",
             messages=history[uid],
-            max_tokens=500
+            max_tokens=300,
+            temperature=0.7
         )
         ans = r.choices[0].message.content
         history[uid].append({"role": "assistant", "content": ans})
