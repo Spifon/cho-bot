@@ -13,11 +13,8 @@ OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
-
 chat_history = {}
-
 CREATORS = {"prostotponyatno": "Otets", "jojlolaxyu": "Mat"}
-
 KEYWORDS = ["cho второй", "cho 2", "сын мой", "сынок", "сыночка", "chos", "чос"]
 
 def get_system_prompt():
@@ -44,17 +41,17 @@ def should_respond(message, bot_id):
 @dp.message(Command("start"))
 async def cmd_start(message):
     u = message.from_user.username
+    answer = "Privet! Ya Cho Vtoroi."
     if u and u.lower() == "prostotponyatno":
-        await message.answer("Privet Otets!")
-    elif u and u.lower() == "jojlolaxyu":
-        await message.answer("Privet Mat!")    else:
-        await message.answer("Privet! Ya Cho Vtoroi.")
-
+        answer = "Privet Otets!"
+    if u and u.lower() == "jojlolaxyu":
+        answer = "Privet Mat!"
+    await message.answer(answer)
 @dp.message(Command("img"))
 async def cmd_img(message):
     prompt = message.text.replace("/img", "").strip()
     if not prompt:
-        await message.answer("Napishi chto narisovat! Primer: /img kot")
+        await message.answer("Napishi chto narisovat!")
         return
     await message.answer("Risuyu...")
     try:
@@ -76,7 +73,8 @@ async def on_message(message):
         chat_history[chat_id] = []
     system_prompt = get_system_prompt()
     user_prompt = get_user_prompt(username)
-    messages = [{"role": "system", "content": system_prompt}, {"role": "system", "content": user_prompt}]
+    messages = [{"role": "system", "content": system_prompt}]
+    messages.append({"role": "system", "content": user_prompt})
     if chat_history[chat_id]:
         messages.extend(chat_history[chat_id][-3:])
     messages.append({"role": "user", "content": message.text})
@@ -96,8 +94,8 @@ def index():
     return "OK"
 
 def start_web():
-    port = int(os.environ.get("PORT", 10000))    app.run(host="0.0.0.0", port=port)
-
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
 if __name__ == "__main__":
     t = threading.Thread(target=start_web, daemon=True)
     t.start()
