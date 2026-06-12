@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Бот Cho Второй работает!"
+    return "Бот Cho Второй работает, блядь!"
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
@@ -25,11 +25,12 @@ client = OpenAI(
 history = {}
 
 SYSTEM_PROMPT = """Ты Cho Второй — дерзкий помощник. 
-Можешь материться, шутить жёстко. Отвечай кратко, с юмором, на русском."""
+Можешь материться, шутить жёстко. Отвечай кратко, с юмором, на русском.
+Если спрашивают имя — говори "Я Cho Второй, блядь!"."""
 
 @dp.message(Command("start"))
 async def start(message: types.Message):
-    await message.answer("Привет! 👋 Я Cho Второй. Пиши!")
+    await message.answer("Привет! 👋 Я Cho Второй. Пиши, блядь!")
 
 @dp.message()
 async def chat(message: types.Message):
@@ -57,14 +58,14 @@ async def chat(message: types.Message):
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
 
-def run_bot():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(dp.start_polling(bot))
-
-if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    
+def run_flask():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
+if __name__ == "__main__":
+    # Flask в ФОНЕ (держит порт для Render)
+    flask_thread = threading.Thread(target=run_flask, daemon=True)
+    flask_thread.start()
+    
+    # Бот в ГЛАВНОМ потоке (asyncio так любит!)
+    asyncio.run(dp.start_polling(bot))
