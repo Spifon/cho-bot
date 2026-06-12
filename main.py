@@ -47,6 +47,13 @@ SYSTEM_PROMPT = """Ты Cho Второй - умный AI-помощник.
 
 БУДЬ АДЕКВАТНЫМ И ТОЧНЫМ!"""
 
+# СПИСОК МОДЕЛЕЙ (от лучшей к худшей)MODELS = [
+    "meta-llama/llama-3-8b-instruct:free",  # Основная
+    "google/gemma-2-9b-it:free",  # Резервная 1
+    "microsoft/phi-3-mini-128k-instruct:free",  # Резервная 2
+]
+
+
 
 def get_user_prompt(username):
 
@@ -89,7 +96,6 @@ def should_respond(message, bot_id):
 
 
 async def cmd_start(message):
-
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
@@ -97,6 +103,7 @@ async def cmd_start(message):
     if u and u.lower() == "prostotponyatno":
 
         answer = "Привет, Отец!"
+
     if u and u.lower() == "jojlolaxyu":
 
         answer = "Привет, Мать!"
@@ -138,12 +145,12 @@ async def cmd_img(message):
                 else:
 
                     await message.answer("Не вышло.")
-
     except Exception as e:
 
         print(f"DEBUG: Img error: {e}")
 
         await message.answer("Не вышло!")
+
 
 
 async def cmd_music(message):
@@ -187,7 +194,6 @@ async def cmd_video(message):
 
 
 async def cmd_wiki(message):
-
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
@@ -195,6 +201,7 @@ async def cmd_wiki(message):
         await message.answer("Напиши что найти!")
 
         return
+
     query = words[1].strip().lower()
 
     await message.answer("Ищу информацию...")
@@ -236,12 +243,12 @@ async def cmd_wiki(message):
     if found_url:
 
         await message.answer("📚 Вот что нашёл:\n\n" + found_url)
-
     else:
 
         search_url = "https://www.fandom.com/search?q=" + urllib.parse.quote(query)
 
         await message.answer("📚 Поищи здесь:\n\n" + search_url)
+
 
 
 async def cmd_meme(message):
@@ -285,7 +292,6 @@ async def on_message(message):
         return
 
     chat_id = message.chat.id
-
     username = message.from_user.username
 
     if chat_id not in chat_history:
@@ -293,6 +299,7 @@ async def on_message(message):
         chat_history[chat_id] = []
 
     messages = []
+
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     user_prompt = get_user_prompt(username)
@@ -309,58 +316,54 @@ async def on_message(message):
 
     messages.append({"role": "user", "content": message.text})
 
-    try:
+    
 
-        # ИСПОЛЬЗУЕМ СТАБИЛЬНУЮ БЕСПЛАТНУЮ МОДЕЛЬ
+    # ПЫТАЕМСЯ ОТПРАВИТЬ ЧЕРЕЗ РАЗНЫЕ МОДЕЛИ
 
-        r = client.chat.completions.create(
+    for i, model in enumerate(MODELS):
 
-            model="meta-llama/llama-3-8b-instruct:free",
+        try:
 
-            messages=messages,
+            print(f"DEBUG: Trying model {model} (attempt {i+1})")
 
-            max_tokens=200,
+            r = client.chat.completions.create(
 
-            temperature=0.7
+                model=model,
 
-        )
+                messages=messages,
 
-        ans = r.choices[0].message.content.strip()
+                max_tokens=200,
 
-        chat_history[chat_id].append({"role": "user", "content": message.text})
+                temperature=0.7
 
-        chat_history[chat_id].append({"role": "assistant", "content": ans})
+            )
 
-        if len(chat_history[chat_id]) > 6:
+            ans = r.choices[0].message.content.strip()
 
-            chat_history[chat_id] = chat_history[chat_id][-6:]
+            chat_history[chat_id].append({"role": "user", "content": message.text})
+            chat_history[chat_id].append({"role": "assistant", "content": ans})
 
-        await message.answer(ans)
+            if len(chat_history[chat_id]) > 6:
 
-    except Exception as e:
+                chat_history[chat_id] = chat_history[chat_id][-6:]
 
-        print(f"DEBUG: AI error: {e}")
+            await message.answer(ans)
 
-        print(f"DEBUG: Error type: {type(e)}")
-        # Показываем пользователю что случилось
+            return  # УСПЕШНО - выходим
 
-        error_msg = str(e)
+            
 
-        if "API key" in error_msg or "api_key" in error_msg:
+        except Exception as e:
 
-            await message.answer("⚠️ Ошибка API ключа! Проверь OPENROUTER_API_KEY на Render.")
+            print(f"DEBUG: Model {model} failed: {e}")
 
-        elif "rate limit" in error_msg.lower():
+            if i == len(MODELS) - 1:
 
-            await message.answer("⏳ Слишком много запросов. Подожди минуту.")
+                # ПОСЛЕДНЯЯ МОДЕЛЬ ТОЖЕ НЕ РАБОТАЕТ
 
-        elif "model" in error_msg.lower():
+                await message.answer("⚠️ Все модели недоступны. Попробуй позже.")
 
-            await message.answer("⚠️ Модель недоступна. Использую резервную.")
-
-        else:
-
-            await message.answer(f"⚠️ Ошибка: {error_msg[:100]}")
+            # ИНАЧЕ ПРОБУЕМ СЛЕДУЮЩУЮ МОДЕЛЬ
 
 
 
@@ -389,8 +392,8 @@ def index():
     return "OK"
 
 
-
 @app.route("/health")
+
 def health():
 
     return "OK"
