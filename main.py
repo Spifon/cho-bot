@@ -36,20 +36,16 @@ CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
 KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = """Ты Cho Второй - AI-помощник.
+SYSTEM_PROMPT = """Ты Cho Второй - умный AI-помощник.
 
 ПРАВИЛА:
 1. Отвечай ТОЛЬКО на русском
 2. Будь кратким (1-2 предложения)
-3. Отвечай ПО ДЕЛУ, не выдумывай
-4. НЕ ИЩИ мемы в обычных словах
-5. Если не знаешь ответа - скажи "Не знаю"
+3. Отвечай ТОЧНО, не выдумывай
+4. Знаешь всё про: ULTRAKILL, Jujutsu Kaisen, аниме, игры, мемы
+5. Если не знаешь - скажи "Не знаю"
 
-ИНФОРМАЦИЯ:
-- V1, V2 - персонажи из ULTRAKILL
-- Обычные слова - это НЕ мемы
-БУДЬ СПОКОЙНЫМ И АДЕКВАТНЫМ!"""
-
+БУДЬ АДЕКВАТНЫМ И ТОЧНЫМ!"""
 
 
 def get_user_prompt(username):
@@ -97,10 +93,10 @@ async def cmd_start(message):
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
+
     if u and u.lower() == "prostotponyatno":
 
         answer = "Привет, Отец!"
-
     if u and u.lower() == "jojlolaxyu":
 
         answer = "Привет, Мать!"
@@ -141,13 +137,13 @@ async def cmd_img(message):
 
                 else:
 
-                    await message.answer("Не вышло. Попробуй проще.")
+                    await message.answer("Не вышло.")
 
     except Exception as e:
 
         print(f"DEBUG: Img error: {e}")
-        await message.answer("Не вышло!")
 
+        await message.answer("Не вышло!")
 
 
 async def cmd_music(message):
@@ -195,10 +191,10 @@ async def cmd_wiki(message):
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
+
         await message.answer("Напиши что найти!")
 
         return
-
     query = words[1].strip().lower()
 
     await message.answer("Ищу информацию...")
@@ -244,8 +240,8 @@ async def cmd_wiki(message):
     else:
 
         search_url = "https://www.fandom.com/search?q=" + urllib.parse.quote(query)
-        await message.answer("📚 Поищи здесь:\n\n" + search_url)
 
+        await message.answer("📚 Поищи здесь:\n\n" + search_url)
 
 
 async def cmd_meme(message):
@@ -293,10 +289,10 @@ async def on_message(message):
     username = message.from_user.username
 
     if chat_id not in chat_history:
+
         chat_history[chat_id] = []
 
     messages = []
-
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     user_prompt = get_user_prompt(username)
@@ -317,13 +313,13 @@ async def on_message(message):
 
         r = client.chat.completions.create(
 
-            model="meta-llama/llama-3-8b-instruct", 
+            model="qwen/qwen-2.5-72b-instruct:free",
 
-            messages=messages, 
+            messages=messages,
 
-            max_tokens=150, 
+            max_tokens=200,
 
-            temperature=0.5
+            temperature=0.7
 
         )
 
@@ -342,8 +338,8 @@ async def on_message(message):
     except Exception as e:
 
         print(f"DEBUG: AI error: {e}")
-        await message.answer("Ошибка")
 
+        await message.answer("Ошибка")
 
 
 def register_handlers():
@@ -391,10 +387,10 @@ def start_web():
 async def polling_with_restart():
 
     while True:
+
         try:
 
             print("DEBUG: Запускаю polling...")
-
             await dp.start_polling(bot)
 
         except Exception as e:
