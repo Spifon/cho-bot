@@ -311,9 +311,11 @@ async def on_message(message):
 
     try:
 
+        # ИСПОЛЬЗУЕМ СТАБИЛЬНУЮ БЕСПЛАТНУЮ МОДЕЛЬ
+
         r = client.chat.completions.create(
 
-            model="qwen/qwen-2.5-72b-instruct:free",
+            model="meta-llama/llama-3-8b-instruct:free",
 
             messages=messages,
 
@@ -339,7 +341,27 @@ async def on_message(message):
 
         print(f"DEBUG: AI error: {e}")
 
-        await message.answer("Ошибка")
+        print(f"DEBUG: Error type: {type(e)}")
+        # Показываем пользователю что случилось
+
+        error_msg = str(e)
+
+        if "API key" in error_msg or "api_key" in error_msg:
+
+            await message.answer("⚠️ Ошибка API ключа! Проверь OPENROUTER_API_KEY на Render.")
+
+        elif "rate limit" in error_msg.lower():
+
+            await message.answer("⏳ Слишком много запросов. Подожди минуту.")
+
+        elif "model" in error_msg.lower():
+
+            await message.answer("⚠️ Модель недоступна. Использую резервную.")
+
+        else:
+
+            await message.answer(f"⚠️ Ошибка: {error_msg[:100]}")
+
 
 
 def register_handlers():
@@ -369,7 +391,6 @@ def index():
 
 
 @app.route("/health")
-
 def health():
 
     return "OK"
@@ -391,6 +412,7 @@ async def polling_with_restart():
         try:
 
             print("DEBUG: Запускаю polling...")
+
             await dp.start_polling(bot)
 
         except Exception as e:
