@@ -331,7 +331,7 @@ async def on_message(message):
 
     try:
 
-        # QWEN 2.5 72B - САМАЯ УМНАЯ БЕСПЛАТНАЯ МОДЕЛЬ!
+        # ПРОБУЕМ QWEN 72B
 
         r = client.chat.completions.create(
 
@@ -360,13 +360,52 @@ async def on_message(message):
 
         await message.answer(ans)
 
+        
+
     except Exception as e:
 
-        print(f"DEBUG: AI error: {e}")
+        print(f"DEBUG: Qwen 72B failed, trying Llama 3: {e}")
 
-        await thinking.delete()
+        # ЕСЛИ Qwen НЕ РАБОТАЕТ - ПРОБУЕМ LLAMA 3
 
-        await message.answer("⚠️ Ошибка API. Попробуй позже.")
+        try:
+
+            r = client.chat.completions.create(
+
+                model="meta-llama/llama-3-8b-instruct:free",
+
+                messages=messages,
+
+                max_tokens=200,
+
+                temperature=0.7
+
+            )
+
+            ans = r.choices[0].message.content.strip()
+
+            chat_history[chat_id].append({"role": "user", "content": message.text})
+
+            chat_history[chat_id].append({"role": "assistant", "content": ans})
+
+            if len(chat_history[chat_id]) > 6:
+
+                chat_history[chat_id] = chat_history[chat_id][-6:]
+            
+
+            await thinking.delete()
+
+            await message.answer(ans)
+
+            
+
+        except Exception as e2:
+
+            print(f"DEBUG: Both models failed: {e2}")
+
+            await thinking.delete()
+
+            await message.answer("⚠️ Сервис перегружен. Попробуй через минуту.")
 
 
 
@@ -391,6 +430,7 @@ def register_handlers():
 @app.route("/")
 
 def index():
+
     return "OK"
 
 
@@ -400,7 +440,6 @@ def index():
 def health():
 
     return "OK"
-
 
 
 def start_web():
@@ -440,4 +479,5 @@ if __name__ == "__main__":
     t = threading.Thread(target=start_web, daemon=True)
 
     t.start()
+
     asyncio.run(polling_with_restart())
