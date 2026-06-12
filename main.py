@@ -36,18 +36,20 @@ CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
 KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = """Ты Cho Второй - AI с знанием игр и мемов.
-
-ЗНАЕШЬ:
-- Лор Ultrakill (V1, V2, Габриэль и т.д.)
-- Доту 2, CS:GO, Minecraft
-- Популярные мемы и аниме
+SYSTEM_PROMPT = """Ты Cho Второй - AI-помощник.
 
 ПРАВИЛА:
-1. Отвечай на русском
-2. Будь кратким
-3. Если спрашивают про лор игр - ОТВЕЧАЙ САМ, не отправляй на вики
-4. Можешь шутить"""
+1. Отвечай ТОЛЬКО на русском
+2. Будь кратким (1-2 предложения)
+3. Отвечай ПО ДЕЛУ, не выдумывай
+4. НЕ ИЩИ мемы в обычных словах
+5. Если не знаешь ответа - скажи "Не знаю"
+
+ИНФОРМАЦИЯ:
+- V1, V2 - персонажи из ULTRAKILL
+- Обычные слова - это НЕ мемы
+БУДЬ СПОКОЙНЫМ И АДЕКВАТНЫМ!"""
+
 
 
 def get_user_prompt(username):
@@ -95,8 +97,8 @@ async def cmd_start(message):
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
-
     if u and u.lower() == "prostotponyatno":
+
         answer = "Привет, Отец!"
 
     if u and u.lower() == "jojlolaxyu":
@@ -113,7 +115,7 @@ async def cmd_img(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши что найти!")
+        await message.answer("Напиши что нарисовать!")
 
         return
 
@@ -123,16 +125,27 @@ async def cmd_img(message):
 
     try:
 
-        encoded = urllib.parse.quote(prompt)
+        safe_prompt = prompt.replace(" ", "_").replace("!", "").replace("?", "")
 
-        img_url = "https://image.pollinations.ai/prompt/" + encoded + "?width=1024&height=1024&nologo=true"
+        img_url = "https://image.pollinations.ai/prompt/" + safe_prompt + "?width=1024&height=1024&nologo=true&seed=42"
 
-        await message.answer_photo(photo=img_url, caption=prompt)
+        
+
+        async with aiohttp.ClientSession() as session:
+
+            async with session.get(img_url, timeout=10) as resp:
+
+                if resp.status == 200:
+
+                    await message.answer_photo(photo=img_url, caption=prompt)
+
+                else:
+
+                    await message.answer("Не вышло. Попробуй проще.")
 
     except Exception as e:
 
         print(f"DEBUG: Img error: {e}")
-
         await message.answer("Не вышло!")
 
 
@@ -146,6 +159,7 @@ async def cmd_music(message):
         await message.answer("Напиши название!")
 
         return
+
     query = words[1].strip()
 
     await message.answer("Ищу музыку...")
@@ -181,7 +195,6 @@ async def cmd_wiki(message):
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
-
         await message.answer("Напиши что найти!")
 
         return
@@ -192,9 +205,8 @@ async def cmd_wiki(message):
 
     
 
-    # ПРЯМЫЕ ССЫЛКИ НА ПОПУЛЯРНЫЕ ВИКИ
-
     wikis = {
+
         "ultrakill": "https://ultrakill.fandom.com",
 
         "v1": "https://ultrakill.fandom.com/wiki/V1",
@@ -212,8 +224,6 @@ async def cmd_wiki(message):
     }
 
     
-
-    # Проверяем есть ли в запросе известные вики
 
     found_url = None
 
@@ -233,10 +243,7 @@ async def cmd_wiki(message):
 
     else:
 
-        # Общий поиск на Fandom
-
         search_url = "https://www.fandom.com/search?q=" + urllib.parse.quote(query)
-
         await message.answer("📚 Поищи здесь:\n\n" + search_url)
 
 
@@ -244,6 +251,7 @@ async def cmd_wiki(message):
 async def cmd_meme(message):
 
     words = message.text.split(" ", 1)
+
     if len(words) < 2:
 
         await message.answer("Напиши тему!")
@@ -285,7 +293,6 @@ async def on_message(message):
     username = message.from_user.username
 
     if chat_id not in chat_history:
-
         chat_history[chat_id] = []
 
     messages = []
@@ -293,6 +300,7 @@ async def on_message(message):
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     user_prompt = get_user_prompt(username)
+
     messages.append({"role": "system", "content": user_prompt})
 
     if chat_history[chat_id]:
@@ -313,9 +321,9 @@ async def on_message(message):
 
             messages=messages, 
 
-            max_tokens=250, 
+            max_tokens=150, 
 
-            temperature=0.7
+            temperature=0.5
 
         )
 
@@ -334,7 +342,6 @@ async def on_message(message):
     except Exception as e:
 
         print(f"DEBUG: AI error: {e}")
-
         await message.answer("Ошибка")
 
 
@@ -342,6 +349,7 @@ async def on_message(message):
 def register_handlers():
 
     dp.message(Command("start"))(cmd_start)
+
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
@@ -383,7 +391,6 @@ def start_web():
 async def polling_with_restart():
 
     while True:
-
         try:
 
             print("DEBUG: Запускаю polling...")
@@ -391,6 +398,7 @@ async def polling_with_restart():
             await dp.start_polling(bot)
 
         except Exception as e:
+
             print(f"DEBUG: Polling оборвался: {e}")
 
             print("DEBUG: Перезапускаю через 5 секунд...")
