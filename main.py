@@ -6,13 +6,17 @@ import threading
 
 import urllib.parse
 
+import aiohttp
+
 from flask import Flask
 
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, types
 
 from aiogram.filters import Command
 
 from openai import OpenAI
+
+from bs4 import BeautifulSoup
 
 
 
@@ -34,21 +38,7 @@ CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
 KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = """Ты Cho Второй - умный AI с доступом к интернету.
-
-ИСТОЧНИКИ ИНФОРМАЦИИ:
-- YouTube - видео и мемы
-- Pinterest - картинки и арты
-- Fandom Wiki - лор игр, аниме, фильмов
-- Twitter/X - мемы и тренды
-- Telegram - каналы и мемы
-
-ПРАВИЛА:
-1. Отвечай ТОЛЬКО на русском
-2. Будь кратким (1-2 предложения)
-3. Понимаешь метаиронию, мемы, шутки из игр
-4. Знаешь лор популярных игр (Dota 2, CS:GO, Minecraft, Genshin и т.д.)5. Если спрашивают про что-то - дай ссылку на источник
-6. Можешь шутить и быть дерзким"""
+SYSTEM_PROMPT = "Ты Cho Второй. Отвечай ТОЛЬКО на русском. Будь кратким."
 
 
 
@@ -57,7 +47,6 @@ def get_user_prompt(username):
     result = "Собеседник обычный. Будь дерзким."
 
     if username and username.lower() in CREATORS:
-
         role = CREATORS[username.lower()]
 
         result = "Собеседник твой " + role + ". Уважай его."
@@ -97,6 +86,7 @@ async def cmd_start(message):
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
+
     if u and u.lower() == "prostotponyatno":
 
         answer = "Привет, Отец!"
@@ -108,14 +98,13 @@ async def cmd_start(message):
     await message.answer(answer)
 
 
-
 async def cmd_img(message):
 
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
 
-        await message.answer("Напиши что найти! Пример: /img кот")
+        await message.answer("Напиши что найти!")
 
         return
 
@@ -127,25 +116,49 @@ async def cmd_img(message):
 
         search_query = urllib.parse.quote(prompt)
 
-        pinterest_url = "https://www.pinterest.com/search/pins/?q=" + search_query
+        url = "https://www.pinterest.com/search/pins/?q=" + search_query
 
         
 
-        msg = "📌 Вот что нашёл на Pinterest:\n\n"
+        async with aiohttp.ClientSession() as session:
 
-        msg += pinterest_url + "\n\n"
+            async with session.get(url) as resp:
 
-        msg += "Там куча артов и картинок!"
+                if resp.status == 200:
 
-        
+                    html = await resp.text()
 
-        await message.answer(msg)
+                    soup = BeautifulSoup(html, 'html.parser')
+
+                    img_tags = soup.find_all('img', limit=5)
+
+                    if img_tags:
+
+                        for img in img_tags:
+
+                            img_src = img.get('src') or img.get('data-src')
+
+                            if img_src and img_src.startswith('http'):
+
+                                await message.answer_photo(photo=img_src, caption=prompt)
+
+                                return
+
+                        await message.answer("Нашёл, но не могу отправить :(")
+                    else:
+
+                        await message.answer("Ничего не нашёл!")
+
+                else:
+
+                    await message.answer("Ошибка поиска!")
 
     except Exception as e:
 
         print(f"DEBUG: Img error: {e}")
 
-        await message.answer("Не вышло найти картинки!")
+        await message.answer("Не вышло!")
+
 
 
 async def cmd_music(message):
@@ -162,25 +175,9 @@ async def cmd_music(message):
 
     await message.answer("Ищу музыку...")
 
-    try:
+    youtube_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query)
 
-        search_query = urllib.parse.quote(query)
-
-        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
-
-        
-
-        msg = "🎵 YouTube:\n"
-
-        msg += youtube_url
-
-        
-
-        await message.answer(msg)
-
-    except Exception as e:
-
-        await message.answer("Не вышло!")
+    await message.answer("🎵 YouTube:\n" + youtube_url)
 
 
 
@@ -195,27 +192,11 @@ async def cmd_video(message):
         return
 
     query = words[1].strip()
+
     await message.answer("Ищу видео...")
+    youtube_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query)
 
-    try:
-
-        search_query = urllib.parse.quote(query)
-
-        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
-
-        
-
-        msg = "🎬 YouTube:\n"
-
-        msg += youtube_url
-
-        
-
-        await message.answer(msg)
-
-    except Exception as e:
-
-        await message.answer("Не вышло!")
+    await message.answer("🎬 YouTube:\n" + youtube_url)
 
 
 
@@ -225,7 +206,7 @@ async def cmd_wiki(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши что найти! Пример: /wiki Солус Дота 2")
+        await message.answer("Напиши что найти!")
 
         return
 
@@ -237,101 +218,54 @@ async def cmd_wiki(message):
 
         search_query = urllib.parse.quote(query)
 
-        fandom_url = "https://www.fandom.com/search?q=" + search_query
+        url = "https://www.fandom.com/search?q=" + search_query
 
         
 
-        msg = "📚 Fandom Wiki (лор игр, аниме):\n\n"
+        async with aiohttp.ClientSession() as session:
 
-        msg += fandom_url + "\n\n"
-        msg += "Там вся инфа по играм, аниме и фильмам!"
+            async with session.get(url) as resp:
 
-        
+                if resp.status == 200:
 
-        await message.answer(msg)
+                    html = await resp.text()
+
+                    soup = BeautifulSoup(html, 'html.parser')
+
+                    articles = soup.find_all('a', class_='title', limit=3)
+
+                    if articles:
+
+                        result = "📚 Нашёл по запросу \"" + query + "\":\n\n"
+
+                        for i, article in enumerate(articles, 1):
+
+                            title = article.get_text(strip=True)
+
+                            link = article.get('href')
+                            if link:
+
+                                if not link.startswith('http'):
+
+                                    link = "https://www.fandom.com" + link
+
+                                result += str(i) + ". " + title + "\n" + link + "\n\n"
+
+                        await message.answer(result)
+
+                    else:
+
+                        await message.answer("Ничего не нашёл на Wiki!")
+
+                else:
+
+                    await message.answer("Ошибка поиска!")
 
     except Exception as e:
 
         print(f"DEBUG: Wiki error: {e}")
 
-        await message.answer("Не вышло найти на вики!")
-
-
-
-async def cmd_twitter(message):
-
-    words = message.text.split(" ", 1)
-
-    if len(words) < 2:
-
-        await message.answer("Напиши что найти!")
-
-        return
-
-    query = words[1].strip()
-
-    await message.answer("Ищу в Twitter/X...")
-
-    try:
-
-        search_query = urllib.parse.quote(query)
-
-        twitter_url = "https://twitter.com/search?q=" + search_query
-
-        
-
-        msg = "🐦 Twitter/X:\n\n"
-
-        msg += twitter_url + "\n\n"
-
-        msg += "Там свежие мемы и тренды!"
-
-        
-
-        await message.answer(msg)
-
-    except Exception as e:
-
-        await message.answer("Не вышло!")
-
-
-async def cmd_telegram(message):
-
-    words = message.text.split(" ", 1)
-
-    if len(words) < 2:
-
-        await message.answer("Напиши что найти!")
-
-        return
-
-    query = words[1].strip()
-
-    await message.answer("Ищу в Telegram...")
-
-    try:
-
-        search_query = urllib.parse.quote(query)
-
-        # Поиск по публичным каналам через Google
-
-        google_url = "https://www.google.com/search?q=site%3At.me+" + search_query
-
-        
-
-        msg = "✈️ Telegram каналы:\n\n"
-
-        msg += google_url + "\n\n"
-
-        msg += "Поиск по публичным каналам!"
-
-        
-
-        await message.answer(msg)
-
-    except Exception as e:
-
-        await message.answer("Не вышло!")
+        await message.answer("Не вышло найти!")
 
 
 
@@ -341,56 +275,27 @@ async def cmd_meme(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши тему мема! Пример: /meme дота 2")
+        await message.answer("Напиши тему!")
+
         return
 
     query = words[1].strip()
 
     await message.answer("Ищу мемы...")
 
-    try:
+    pinterest_url = "https://www.pinterest.com/search/pins/?q=" + urllib.parse.quote(query) + "%20meme"
 
-        search_query = urllib.parse.quote(query)
-
-        
-
-        # Pinterest с мемами
-
-        pinterest_url = "https://www.pinterest.com/search/pins/?q=" + search_query + "%20meme"
-
-        
-
-        # Reddit с мемами
-
-        reddit_url = "https://www.reddit.com/search/?q=" + search_query
-
-        
-
-        msg = "😂 Мемы:\n\n"
-
-        msg += "Pinterest: " + pinterest_url + "\n\n"
-
-        msg += "Reddit: " + reddit_url + "\n\n"
-
-        msg += "Выбирай где смотреть!"
-
-        
-
-        await message.answer(msg)
-
-    except Exception as e:
-
-        await message.answer("Не вышло найти мемы!")
+    await message.answer("😂 Pinterest:\n" + pinterest_url)
 
 
 
 async def on_message(message):
 
     try:
-
         me = await bot.get_me()
 
         bot_id = me.id
+
     except Exception as e:
 
         print(f"DEBUG: get_me error: {e}")
@@ -436,10 +341,10 @@ async def on_message(message):
             model="meta-llama/llama-3-8b-instruct", 
 
             messages=messages, 
-
             max_tokens=200, 
 
             temperature=0.7
+
         )
 
         ans = r.choices[0].message.content.strip()
@@ -474,14 +379,6 @@ def register_handlers():
 
     dp.message(Command("wiki"))(cmd_wiki)
 
-    dp.message(Command("twitter"))(cmd_twitter)
-
-    dp.message(Command("tw"))(cmd_twitter)
-
-    dp.message(Command("telegram"))(cmd_telegram)
-
-    dp.message(Command("tg"))(cmd_telegram)
-
     dp.message(Command("meme"))(cmd_meme)
 
     dp.message()(on_message)
@@ -489,10 +386,10 @@ def register_handlers():
 
 
 @app.route("/")
+
 def index():
 
     return "OK"
-
 
 
 @app.route("/health")
@@ -538,6 +435,7 @@ if __name__ == "__main__":
     print("DEBUG: бот запускается...")
 
     t = threading.Thread(target=start_web, daemon=True)
+
     t.start()
 
     asyncio.run(polling_with_restart())
