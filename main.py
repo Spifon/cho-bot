@@ -16,8 +16,6 @@ from aiogram.filters import Command
 
 from openai import OpenAI
 
-from bs4 import BeautifulSoup
-
 
 
 app = Flask(__name__)
@@ -38,13 +36,18 @@ CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
 KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = "Ты Cho Второй. Отвечай ТОЛЬКО на русском. Будь кратким."
+SYSTEM_PROMPT = """Ты Cho Второй - AI с знанием игр и мемов.
 
-HEADERS = {
+ЗНАЕШЬ:
+- Лор Ultrakill (V1, V2, Габриэль и т.д.)
+- Доту 2, CS:GO, Minecraft
+- Популярные мемы и аниме
 
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-
-}
+ПРАВИЛА:
+1. Отвечай на русском
+2. Будь кратким
+3. Если спрашивают про лор игр - ОТВЕЧАЙ САМ, не отправляй на вики
+4. Можешь шутить"""
 
 
 def get_user_prompt(username):
@@ -94,8 +97,8 @@ async def cmd_start(message):
     answer = "Привет! Я Cho Второй."
 
     if u and u.lower() == "prostotponyatno":
-
         answer = "Привет, Отец!"
+
     if u and u.lower() == "jojlolaxyu":
 
         answer = "Привет, Мать!"
@@ -116,7 +119,7 @@ async def cmd_img(message):
 
     prompt = words[1].strip()
 
-    await message.answer("Ищу картинки...")
+    await message.answer("Рисую...")
 
     try:
 
@@ -143,8 +146,8 @@ async def cmd_music(message):
         await message.answer("Напиши название!")
 
         return
-
     query = words[1].strip()
+
     await message.answer("Ищу музыку...")
 
     youtube_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query)
@@ -183,79 +186,54 @@ async def cmd_wiki(message):
 
         return
 
-    query = words[1].strip()
+    query = words[1].strip().lower()
 
-    await message.answer("Ищу на Fandom Wiki...")
+    await message.answer("Ищу информацию...")
 
-    try:
+    
 
-        search_query = urllib.parse.quote(query)
+    # ПРЯМЫЕ ССЫЛКИ НА ПОПУЛЯРНЫЕ ВИКИ
 
-        
+    wikis = {
+        "ultrakill": "https://ultrakill.fandom.com",
 
-        # ИСПОЛЬЗУЕМ API ВМЕСТО ПАРСИНГА
-        search_url = "https://www.fandom.com/search?q=" + search_query
+        "v1": "https://ultrakill.fandom.com/wiki/V1",
 
-        
+        "v2": "https://ultrakill.fandom.com/wiki/V2",
 
-        async with aiohttp.ClientSession(headers=HEADERS) as session:
+        "gabriel": "https://ultrakill.fandom.com/wiki/Gabriel",
 
-            async with session.get(search_url, timeout=10) as resp:
+        "dota": "https://dota2.fandom.com/ru",
 
-                if resp.status == 200:
+        "genshin": "https://genshin.fandom.com/ru",
 
-                    html = await resp.text()
+        "minecraft": "https://minecraft.fandom.com/ru"
 
-                    soup = BeautifulSoup(html, 'html.parser')
+    }
 
-                    
+    
 
-                    # Ищем результаты поиска
+    # Проверяем есть ли в запросе известные вики
 
-                    results = []
+    found_url = None
 
-                    links = soup.find_all('a', href=True)
+    for key, url in wikis.items():
 
-                    
+        if key in query:
 
-                    for link in links[:5]:
+            found_url = url
 
-                        href = link.get('href', '')
+            break
 
-                        text = link.get_text(strip=True)
+    
 
-                        
+    if found_url:
 
-                        if '/wiki/' in href and text and len(text) > 5 and len(text) < 100:
+        await message.answer("📚 Вот что нашёл:\n\n" + found_url)
 
-                            if href.startswith('/'):
+    else:
 
-                                href = "https://www.fandom.com" + href
-
-                            results.append((text, href))
-
-                    
-
-                    if results:
-
-                        msg = "📚 Нашёл:\n\n"
-
-                        for i, (title, url) in enumerate(results[:3], 1):
-
-                            msg += f"{i}. {title}\n{url}\n\n"
-                        await message.answer(msg)
-
-                    else:
-
-                        await message.answer("📚 Поищи здесь:\n\n" + search_url)
-
-                else:
-
-                    await message.answer("📚 Поищи здесь:\n\n" + search_url)
-
-    except Exception as e:
-
-        print(f"DEBUG: Wiki error: {e}")
+        # Общий поиск на Fandom
 
         search_url = "https://www.fandom.com/search?q=" + urllib.parse.quote(query)
 
@@ -266,7 +244,6 @@ async def cmd_wiki(message):
 async def cmd_meme(message):
 
     words = message.text.split(" ", 1)
-
     if len(words) < 2:
 
         await message.answer("Напиши тему!")
@@ -292,6 +269,7 @@ async def on_message(message):
         bot_id = me.id
 
     except Exception as e:
+
         print(f"DEBUG: get_me error: {e}")
 
         return
@@ -315,7 +293,6 @@ async def on_message(message):
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     user_prompt = get_user_prompt(username)
-
     messages.append({"role": "system", "content": user_prompt})
 
     if chat_history[chat_id]:
@@ -336,11 +313,12 @@ async def on_message(message):
 
             messages=messages, 
 
-            max_tokens=200, 
+            max_tokens=250, 
 
             temperature=0.7
 
         )
+
         ans = r.choices[0].message.content.strip()
 
         chat_history[chat_id].append({"role": "user", "content": message.text})
@@ -364,7 +342,6 @@ async def on_message(message):
 def register_handlers():
 
     dp.message(Command("start"))(cmd_start)
-
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
@@ -390,6 +367,7 @@ def index():
 @app.route("/health")
 
 def health():
+
     return "OK"
 
 
@@ -413,7 +391,6 @@ async def polling_with_restart():
             await dp.start_polling(bot)
 
         except Exception as e:
-
             print(f"DEBUG: Polling оборвался: {e}")
 
             print("DEBUG: Перезапускаю через 5 секунд...")
