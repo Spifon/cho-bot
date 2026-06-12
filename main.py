@@ -126,7 +126,7 @@ async def cmd_img(message):
 
 async def on_message(message):
 
-    me = await bot.me
+    me = await bot.get_me()
 
     bot_id = me.id
 
