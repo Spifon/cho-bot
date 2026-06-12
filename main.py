@@ -110,39 +110,22 @@ async def cmd_img(message):
 
     try:
 
-        # Переводим кириллицу в транслит или используем английский
-
-        # Кодируем ВСЕ символы правильно
-
         encoded_prompt = urllib.parse.quote(prompt.encode('utf-8'))
-
-        
-
-        # Пробуем Pollinations
 
         img_url = "https://image.pollinations.ai/prompt/" + encoded_prompt + "?width=1024&height=1024&nologo=true&seed=42"
 
-        
-
         print(f"DEBUG: Image URL: {img_url}")
-
-        
-
-        # Отправляем картинку
 
         await message.answer_photo(photo=img_url, caption=prompt)
 
-        
-
         print("DEBUG: Image sent successfully")
-
-        
 
     except Exception as e:
 
         print(f"DEBUG: Image error: {e}")
 
-        await message.answer("Не вышло! Попробуй на английском, например: /img cat in space")
+        await message.answer("Не вышло! Попробуй на английском.")
+
 
 
 async def cmd_music(message):
@@ -162,7 +145,6 @@ async def cmd_music(message):
     try:
 
         search_query = urllib.parse.quote(query)
-
         youtube_url = "https://www.youtube.com/results?search_query=" + search_query
 
         msg = "🎵 Вот что нашёл:\n\n"
@@ -194,6 +176,7 @@ async def cmd_video(message):
     query = words[1].strip()
 
     await message.answer("Ищу видео...")
+
     try:
 
         search_query = urllib.parse.quote(query)
@@ -211,7 +194,6 @@ async def cmd_video(message):
     except Exception as e:
 
         print(f"DEBUG: Video error: {e}")
-
         await message.answer("Не вышло найти видео!")
 
 
@@ -243,6 +225,7 @@ async def on_message(message):
     if chat_id not in chat_history:
 
         chat_history[chat_id] = []
+
     messages = []
 
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
@@ -260,7 +243,6 @@ async def on_message(message):
             messages.append(msg)
 
     messages.append({"role": "user", "content": message.text})
-
     try:
 
         r = client.chat.completions.create(model="meta-llama/llama-3-8b-instruct", messages=messages, max_tokens=200, temperature=0.8)
@@ -292,6 +274,7 @@ def register_handlers():
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
+
     dp.message(Command("video"))(cmd_video)
 
     dp.message()(on_message)
@@ -306,11 +289,38 @@ def index():
 
 
 
+@app.route("/health")
+
+def health():
+    return "OK"
+
+
+
 def start_web():
 
     port = int(os.environ.get("PORT", 10000))
 
     app.run(host="0.0.0.0", port=port)
+
+
+
+async def polling_with_restart():
+
+    while True:
+
+        try:
+
+            print("DEBUG: Запускаю polling...")
+
+            await dp.start_polling(bot)
+
+        except Exception as e:
+
+            print(f"DEBUG: Polling оборвался: {e}")
+
+            print("DEBUG: Перезапускаю через 5 секунд...")
+
+            await asyncio.sleep(5)
 
 
 
@@ -324,4 +334,4 @@ if __name__ == "__main__":
 
     t.start()
 
-    asyncio.run(dp.start_polling(bot))
+    asyncio.run(polling_with_restart())
