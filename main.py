@@ -8,10 +8,6 @@ from openai import OpenAI
 
 app = Flask(__name__)
 
-@app.route('/')
-def home():
-    return "Бот Cho Второй работает!"
-
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
@@ -48,10 +44,10 @@ def get_system_prompt(username):
     
     if creator_name:
         return f"""Ты Cho Второй — умный, дерзкий и весёлый AI-помощник.
+
 ВАЖНО:
 1. Твой собеседник — {creator_name} ({username}), ты его бесконечно уважаешь и любишь
-2. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ
-3. К {creator_name} НИКОГДА не груби, обращайся с уважением
+2. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ3. К {creator_name} НИКОГДА не груби, обращайся с уважением
 4. Можешь шутить, но без грубости к {creator_name}
 5. Отвечай кратко, с юмором
 6. Если {creator_name} просит что-то сделать — выполняй с энтузиазмом
@@ -69,21 +65,17 @@ def get_system_prompt(username):
 5. Не груби создателям @ProstoTPonyatno и @Jojlolaxyu
 6. Будь полезным, но с характером"""
 
-def should_respond_in_group(message: types.Message) -> bool:
+def should_respond_in_group(message: types.Message, bot_id: int) -> bool:
     """Проверяем, нужно ли отвечать в группе"""
     text = message.text.lower() if message.text else ""
     
-    # Проверяем кодoвые имена
+    # Проверяем кодовые имена
     for code_name in CODE_NAMES:
         if code_name in text:
             return True
     
     # Проверяем, упомянули ли бота
-    if message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me).id:
-        return True
-    
-    # Проверяем, ответ на сообщение бота
-    if message.reply_to_message and message.reply_to_message.from_user.is_bot:
+    if message.reply_to_message and message.reply_to_message.from_user.id == bot_id:
         return True
     
     return False
@@ -96,13 +88,17 @@ async def start(message: types.Message):
             await message.answer("Привет, Отец! 👋 Твой сын Cho Второй на связи!")
         else:
             await message.answer("Привет, Мать! 👋 Твой сын Cho Второй на связи!")
-    else:        await message.answer("Привет! 👋 Я Cho Второй. Пиши!")
+    else:
+        await message.answer("Привет! 👋 Я Cho Второй. Пиши!")
 
 @dp.message()
 async def chat(message: types.Message):
-    # Проверяем, нужно ли отвечать в группе
+    # Получаем ID бота
+    bot_me = await bot.me
+    bot_id = bot_me.id
+        # Проверяем, нужно ли отвечать в группе
     if message.chat.type != "private":
-        if not should_respond_in_group(message):
+        if not should_respond_in_group(message, bot_id):
             return
     
     user_id = message.from_user.id
@@ -135,6 +131,10 @@ async def chat(message: types.Message):
         
     except Exception as e:
         await message.answer(f"Ошибка: {e}")
+
+@app.route('/')
+def home():
+    return "Бот Cho Второй работает!"
 
 def run_flask():
     port = int(os.environ.get("PORT", 10000))
