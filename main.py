@@ -12,10 +12,6 @@ app = Flask(__name__)
 def home():
     return "Бот Cho Второй работает!"
 
-@app.route('/health')
-def health():
-    return "OK"
-
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
 
@@ -67,10 +63,8 @@ def run_bot():
     loop.run_until_complete(dp.start_polling(bot))
 
 if __name__ == "__main__":
-    # Запускаем бота в фоне
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
     
-    # Запускаем Flask НА ВСЕХ ИНТЕРФЕЙСАХ
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port, threaded=True)
+    app.run(host="0.0.0.0", port=port)
