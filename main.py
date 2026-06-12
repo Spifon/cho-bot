@@ -3,7 +3,7 @@ import asyncio
 import threading
 import urllib.parse
 from flask import Flask
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 from openai import OpenAI
 
@@ -15,14 +15,15 @@ dp = Dispatcher()
 client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
 chat_history = {}
 CREATORS = {"prostotponyatno": "Otets", "jojlolaxyu": "Mat"}
-KEYWORDS = ["cho второй", "cho 2", "сын мой", "сынок", "сыночка", "chos", "чос"]
+KEYWORDS = ["cho vtoroi", "cho 2", "syn moi", "synok"]
 
-SYSTEM_PROMPT = "You are Cho Vtoroi. CRITICAL: Answer ONLY in Russian. Never English. Be brief 1-2 sentences."
+SYSTEM_PROMPT = "You are Cho Vtoroi. Answer ONLY in Russian. Be brief."
 
 def get_user_prompt(username):
     if username and username.lower() in CREATORS:
         role = CREATORS[username.lower()]
-        return f"Your partner is your {role}. Respect them."
+        text = f"Your partner is your {role}. Respect them."
+        return text
     return "Your partner is regular user. Be cheeky."
 
 def should_respond(message, bot_id):
@@ -46,17 +47,16 @@ async def cmd_start(message):
         answer = "Privet Mat!"
     await message.answer(answer)
 
-async def cmd_img(message):
-    text = message.text    parts = text.split(" ", 1)
-    if len(parts) < 2:
-        await message.answer("Napishi chto narisovat! Primer: /img kot")
+async def cmd_img(message):    words = message.text.split()
+    if len(words) < 2:
+        await message.answer("Napishi chto narisovat!")
         return
-    prompt = parts[1].strip()
+    prompt = words[1]
     await message.answer("Risuyu...")
     try:
         encoded = urllib.parse.quote(prompt)
-        img_url = f"https://image.pollinations.ai/prompt/{encoded}?width=1024&height=1024"
-        await message.answer_photo(photo=img_url, caption=f"Gotovo: {prompt}")
+        img_url = "https://image.pollinations.ai/prompt/" + encoded + "?width=1024&height=1024"
+        await message.answer_photo(photo=img_url, caption="Gotovo")
     except Exception as e:
         await message.answer("Ne vyshlo!")
 
@@ -69,10 +69,13 @@ async def on_message(message):
     username = message.from_user.username
     if chat_id not in chat_history:
         chat_history[chat_id] = []
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages = []
+    messages.append({"role": "system", "content": SYSTEM_PROMPT})
     messages.append({"role": "system", "content": get_user_prompt(username)})
     if chat_history[chat_id]:
-        messages.extend(chat_history[chat_id][-3:])
+        last_msgs = chat_history[chat_id][-3:]
+        for msg in last_msgs:
+            messages.append(msg)
     messages.append({"role": "user", "content": message.text})
     try:
         r = client.chat.completions.create(model="meta-llama/llama-3-8b-instruct", messages=messages, max_tokens=200, temperature=0.8)
@@ -93,10 +96,10 @@ def register_handlers():
 @app.route("/")
 def index():
     return "OK"
-
 def start_web():
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
+
 if __name__ == "__main__":
     register_handlers()
     t = threading.Thread(target=start_web, daemon=True)
