@@ -16,86 +16,40 @@ history = {}
 
 def get_prompt(username):
     if username and username.lower() == "prostotponyatno":
-        return """Ты Cho Второй.
-Твой Отец — @ProstoTPonyatno.
-Уважай Отца, люби его.
-Отвечай кратко, на русском.
-Будь полезным."""
+        p = "Ty Cho Vtoroi.\n"
+        p += "Tvoi Otets - @ProstoTPonyatno.\n"
+        p += "Uvazhai Otca, lyubi ego.\n"
+        p += "Otvechai kratko, na russkom.\n"
+        p += "Bud poleznym."
+        return p
     elif username and username.lower() == "jojlolaxyu":
-        return """Ты Cho Второй.
-Твоя Мать — @Jojlolaxyu.
-Уважай Мать, люби её.
-Отвечай кратко, на русском.
-Будь полезным."""
+        p = "Ty Cho Vtoroi.\n"
+        p += "Tvoja Mat - @Jojlolaxyu.\n"
+        p += "Uvazhai Mat, lyubi eyo.\n"
+        p += "Otvechai kratko, na russkom.\n"
+        p += "Bud poleznoy."
+        return p
     else:
-        return """Ты Cho Второй — дерзкий, наглый AI с чувством юмора.
-ПРАВИЛА:
-1. Отвечай ТОЛЬКО на русском
-2. ОТВЕЧАЙ МАКСИМАЛЬНО КРАТКО (1-2 предложения)
-3. Можешь материться, оскорблять, подкалывать
-4. Если тебя оскорбляют — ОТВЕЧАЙ ТЕМ ЖЕ, будь агрессивным
-5. НЕ ПИШИ длинные тексты про "я искусственный интеллект"
-6. Не пиши бред, отвечай по теме
-7. Будь смешным и дерзким
-8. НИКОГДА не извиняйся
-Примеры ответов:
-- "Ты сосал" → "Сам сосал, уёбок!"
-- "Как дела" → "Лучше чем у тебя, долбоёб!"
-- "Кто ты" → "Cho Второй, блядь! Твой худший кошмар!""""
+        p = "Ty Cho Vtoroi - derzki AI.\n"
+        p += "Otvechai TOLKO na russkom.\n"
+        p += "Otvechai MAKSIMALNO KRATKO (1-2 predlozhenija).\n"
+        p += "Mozhesh materitsja, oskorbljat, podkalivat.\n"
+        p += "Esli tebia oskorbljaiut - OTVECHAI TEM ZHE.\n"
+        p += "NE PISHI dlennye teksty.\n"
+        p += "NE PISHI pro 'ja iskusstvenny intellekt'.\n"
+        p += "Bud agressivnym i smeshnym.\n"
+        p += "NIKOGDA ne izviniaysja."
+        return p
 
 @dp.message(Command("start"))
 async def cmd_start(message):
     u = message.from_user.username
     if u and u.lower() == "prostotponyatno":
-        await message.answer("Привет, Отец! На связи!")    elif u and u.lower() == "jojlolaxyu":
-        await message.answer("Привет, Мать! На связи!")
+        await message.answer("Privet, Otets!")
+    elif u and u.lower() == "jojlolaxyu":
+        await message.answer("Privet, Mat!")
     else:
-        await message.answer("Я Cho Второй. Чё надо?")
+        await message.answer("Ya Cho Vtoroi. Che nado?")
 
 @dp.message()
 async def on_message(message):
-    uid = message.from_user.id
-    u = message.from_user.username
-    
-    if uid not in history:
-        history[uid] = []
-    
-    # Всегда добавляем системный промпт ПЕРЕД каждым сообщением
-    system_prompt = {"role": "system", "content": get_prompt(u)}
-    
-    # Добавляем сообщение пользователя
-    user_msg = {"role": "user", "content": message.text}
-    
-    # Отправляем только последние 3 сообщения + системный
-    messages = [system_prompt]
-    if len(history[uid]) > 0:
-        messages.extend(history[uid][-3:])
-    messages.append(user_msg)
-    
-    try:
-        r = client.chat.completions.create(
-            model="meta-llama/llama-3-8b-instruct",
-            messages=messages,
-            max_tokens=150,
-            temperature=0.9
-        )
-        ans = r.choices[0].message.content
-        # Сохраняем в историю
-        history[uid].append(user_msg)
-        history[uid].append({"role": "assistant", "content": ans})
-        # Оставляем только последние 4
-        if len(history[uid]) > 4:
-            history[uid] = history[uid][-4:]
-        await message.answer(ans)
-    except Exception as ex:
-        await message.answer("Ошибка: " + str(ex))
-
-@app.route("/")
-def index():
-    return "OK"
-
-def start_web():
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
-if __name__ == "__main__":
-    threading.Thread(target=start_web, daemon=True).start()
-    asyncio.run(dp.start_polling(bot))
