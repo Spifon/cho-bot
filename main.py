@@ -22,7 +22,7 @@ def get_user_prompt(username):
     result = "Your partner is regular user. Be cheeky."
     if username and username.lower() in CREATORS:
         role = CREATORS[username.lower()]
-        result = f"Your partner is your {role}. Respect them."
+        result = "Your partner is your " + role + ". Respect them."
     return result
 
 def should_respond(message, bot_id):
