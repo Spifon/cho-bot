@@ -34,7 +34,21 @@ CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
 KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = "Ты Cho Второй. Отвечай ТОЛЬКО на русском. Будь кратким."
+SYSTEM_PROMPT = """Ты Cho Второй - умный AI с доступом к интернету.
+
+ИСТОЧНИКИ ИНФОРМАЦИИ:
+- YouTube - видео и мемы
+- Pinterest - картинки и арты
+- Fandom Wiki - лор игр, аниме, фильмов
+- Twitter/X - мемы и тренды
+- Telegram - каналы и мемы
+
+ПРАВИЛА:
+1. Отвечай ТОЛЬКО на русском
+2. Будь кратким (1-2 предложения)
+3. Понимаешь метаиронию, мемы, шутки из игр
+4. Знаешь лор популярных игр (Dota 2, CS:GO, Minecraft, Genshin и т.д.)5. Если спрашивают про что-то - дай ссылку на источник
+6. Можешь шутить и быть дерзким"""
 
 
 
@@ -47,6 +61,7 @@ def get_user_prompt(username):
         role = CREATORS[username.lower()]
 
         result = "Собеседник твой " + role + ". Уважай его."
+
     return result
 
 
@@ -82,7 +97,6 @@ async def cmd_start(message):
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
-
     if u and u.lower() == "prostotponyatno":
 
         answer = "Привет, Отец!"
@@ -96,36 +110,42 @@ async def cmd_start(message):
 
 
 async def cmd_img(message):
+
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
 
-        await message.answer("Напиши что нарисовать! Пример: /img cat")
+        await message.answer("Напиши что найти! Пример: /img кот")
 
         return
 
     prompt = words[1].strip()
 
-    await message.answer("Рисую...")
+    await message.answer("Ищу картинки...")
 
     try:
 
-        encoded_prompt = urllib.parse.quote(prompt.encode('utf-8'))
+        search_query = urllib.parse.quote(prompt)
 
-        img_url = "https://image.pollinations.ai/prompt/" + encoded_prompt + "?width=1024&height=1024&nologo=true&seed=42"
+        pinterest_url = "https://www.pinterest.com/search/pins/?q=" + search_query
 
-        print(f"DEBUG: Image URL: {img_url}")
+        
 
-        await message.answer_photo(photo=img_url, caption=prompt)
+        msg = "📌 Вот что нашёл на Pinterest:\n\n"
 
-        print("DEBUG: Image sent successfully")
+        msg += pinterest_url + "\n\n"
+
+        msg += "Там куча артов и картинок!"
+
+        
+
+        await message.answer(msg)
 
     except Exception as e:
 
-        print(f"DEBUG: Image error: {e}")
+        print(f"DEBUG: Img error: {e}")
 
-        await message.answer("Не вышло! Попробуй на английском.")
-
+        await message.answer("Не вышло найти картинки!")
 
 
 async def cmd_music(message):
@@ -134,7 +154,7 @@ async def cmd_music(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши название! Пример: /music Imagine Dragons")
+        await message.answer("Напиши название!")
 
         return
 
@@ -145,21 +165,22 @@ async def cmd_music(message):
     try:
 
         search_query = urllib.parse.quote(query)
+
         youtube_url = "https://www.youtube.com/results?search_query=" + search_query
 
-        msg = "🎵 Вот что нашёл:\n\n"
+        
 
-        msg += youtube_url + "\n\n"
+        msg = "🎵 YouTube:\n"
 
-        msg += "Скачай музыку оттуда или послушай онлайн!"
+        msg += youtube_url
+
+        
 
         await message.answer(msg)
 
     except Exception as e:
 
-        print(f"DEBUG: Music error: {e}")
-
-        await message.answer("Не вышло найти музыку!")
+        await message.answer("Не вышло!")
 
 
 
@@ -169,12 +190,11 @@ async def cmd_video(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши что найти! Пример: /video cats")
+        await message.answer("Напиши что найти!")
 
         return
 
     query = words[1].strip()
-
     await message.answer("Ищу видео...")
 
     try:
@@ -183,18 +203,184 @@ async def cmd_video(message):
 
         youtube_url = "https://www.youtube.com/results?search_query=" + search_query
 
-        msg = "🎬 Вот что нашёл:\n\n"
+        
 
-        msg += youtube_url + "\n\n"
+        msg = "🎬 YouTube:\n"
 
-        msg += "Смотри видео на YouTube!"
+        msg += youtube_url
+
+        
 
         await message.answer(msg)
 
     except Exception as e:
 
-        print(f"DEBUG: Video error: {e}")
-        await message.answer("Не вышло найти видео!")
+        await message.answer("Не вышло!")
+
+
+
+async def cmd_wiki(message):
+
+    words = message.text.split(" ", 1)
+
+    if len(words) < 2:
+
+        await message.answer("Напиши что найти! Пример: /wiki Солус Дота 2")
+
+        return
+
+    query = words[1].strip()
+
+    await message.answer("Ищу на Fandom Wiki...")
+
+    try:
+
+        search_query = urllib.parse.quote(query)
+
+        fandom_url = "https://www.fandom.com/search?q=" + search_query
+
+        
+
+        msg = "📚 Fandom Wiki (лор игр, аниме):\n\n"
+
+        msg += fandom_url + "\n\n"
+        msg += "Там вся инфа по играм, аниме и фильмам!"
+
+        
+
+        await message.answer(msg)
+
+    except Exception as e:
+
+        print(f"DEBUG: Wiki error: {e}")
+
+        await message.answer("Не вышло найти на вики!")
+
+
+
+async def cmd_twitter(message):
+
+    words = message.text.split(" ", 1)
+
+    if len(words) < 2:
+
+        await message.answer("Напиши что найти!")
+
+        return
+
+    query = words[1].strip()
+
+    await message.answer("Ищу в Twitter/X...")
+
+    try:
+
+        search_query = urllib.parse.quote(query)
+
+        twitter_url = "https://twitter.com/search?q=" + search_query
+
+        
+
+        msg = "🐦 Twitter/X:\n\n"
+
+        msg += twitter_url + "\n\n"
+
+        msg += "Там свежие мемы и тренды!"
+
+        
+
+        await message.answer(msg)
+
+    except Exception as e:
+
+        await message.answer("Не вышло!")
+
+
+async def cmd_telegram(message):
+
+    words = message.text.split(" ", 1)
+
+    if len(words) < 2:
+
+        await message.answer("Напиши что найти!")
+
+        return
+
+    query = words[1].strip()
+
+    await message.answer("Ищу в Telegram...")
+
+    try:
+
+        search_query = urllib.parse.quote(query)
+
+        # Поиск по публичным каналам через Google
+
+        google_url = "https://www.google.com/search?q=site%3At.me+" + search_query
+
+        
+
+        msg = "✈️ Telegram каналы:\n\n"
+
+        msg += google_url + "\n\n"
+
+        msg += "Поиск по публичным каналам!"
+
+        
+
+        await message.answer(msg)
+
+    except Exception as e:
+
+        await message.answer("Не вышло!")
+
+
+
+async def cmd_meme(message):
+
+    words = message.text.split(" ", 1)
+
+    if len(words) < 2:
+
+        await message.answer("Напиши тему мема! Пример: /meme дота 2")
+        return
+
+    query = words[1].strip()
+
+    await message.answer("Ищу мемы...")
+
+    try:
+
+        search_query = urllib.parse.quote(query)
+
+        
+
+        # Pinterest с мемами
+
+        pinterest_url = "https://www.pinterest.com/search/pins/?q=" + search_query + "%20meme"
+
+        
+
+        # Reddit с мемами
+
+        reddit_url = "https://www.reddit.com/search/?q=" + search_query
+
+        
+
+        msg = "😂 Мемы:\n\n"
+
+        msg += "Pinterest: " + pinterest_url + "\n\n"
+
+        msg += "Reddit: " + reddit_url + "\n\n"
+
+        msg += "Выбирай где смотреть!"
+
+        
+
+        await message.answer(msg)
+
+    except Exception as e:
+
+        await message.answer("Не вышло найти мемы!")
 
 
 
@@ -205,7 +391,6 @@ async def on_message(message):
         me = await bot.get_me()
 
         bot_id = me.id
-
     except Exception as e:
 
         print(f"DEBUG: get_me error: {e}")
@@ -243,9 +428,19 @@ async def on_message(message):
             messages.append(msg)
 
     messages.append({"role": "user", "content": message.text})
+
     try:
 
-        r = client.chat.completions.create(model="meta-llama/llama-3-8b-instruct", messages=messages, max_tokens=200, temperature=0.8)
+        r = client.chat.completions.create(
+
+            model="meta-llama/llama-3-8b-instruct", 
+
+            messages=messages, 
+
+            max_tokens=200, 
+
+            temperature=0.7
+        )
 
         ans = r.choices[0].message.content.strip()
 
@@ -277,12 +472,23 @@ def register_handlers():
 
     dp.message(Command("video"))(cmd_video)
 
+    dp.message(Command("wiki"))(cmd_wiki)
+
+    dp.message(Command("twitter"))(cmd_twitter)
+
+    dp.message(Command("tw"))(cmd_twitter)
+
+    dp.message(Command("telegram"))(cmd_telegram)
+
+    dp.message(Command("tg"))(cmd_telegram)
+
+    dp.message(Command("meme"))(cmd_meme)
+
     dp.message()(on_message)
 
 
 
 @app.route("/")
-
 def index():
 
     return "OK"
@@ -292,6 +498,7 @@ def index():
 @app.route("/health")
 
 def health():
+
     return "OK"
 
 
@@ -331,7 +538,6 @@ if __name__ == "__main__":
     print("DEBUG: бот запускается...")
 
     t = threading.Thread(target=start_web, daemon=True)
-
     t.start()
 
     asyncio.run(polling_with_restart())
