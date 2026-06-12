@@ -6,6 +6,8 @@ import threading
 
 import urllib.parse
 
+import aiohttp
+
 from flask import Flask
 
 from aiogram import Bot, Dispatcher
@@ -13,8 +15,6 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command
 
 from openai import OpenAI
-
-import yt_dlp
 
 
 
@@ -55,11 +55,7 @@ def get_user_prompt(username):
 
 def should_respond(message, bot_id):
 
-    print(f"DEBUG: тип={message.chat.type}, текст={message.text}")
-
     if message.chat.type == "private":
-
-        print("DEBUG: личка - отвечаю")
 
         return True
 
@@ -71,19 +67,13 @@ def should_respond(message, bot_id):
 
             if keyword in text:
 
-                print(f"DEBUG: найдено {keyword} - отвечаю")
-
                 return True
 
     if message.reply_to_message:
 
         if message.reply_to_message.from_user.id == bot_id:
 
-            print("DEBUG: ответ боту - отвечаю")
-
             return True
-
-    print("DEBUG: не отвечаю")
 
     return False
 
@@ -91,11 +81,10 @@ def should_respond(message, bot_id):
 
 async def cmd_start(message):
 
-    print(f"DEBUG: /start от {message.from_user.username}")
-
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
+
     if u and u.lower() == "prostotponyatno":
 
         answer = "Привет, Отец!"
@@ -107,98 +96,129 @@ async def cmd_start(message):
     await message.answer(answer)
 
 
-
 async def cmd_img(message):
 
-    print(f"DEBUG: /img от {message.from_user.username}")
-
-    words = message.text.split()
+    words = message.text.split(" ", 1)
 
     if len(words) < 2:
 
-        await message.answer("Напиши что нарисовать!")
+        await message.answer("Напиши что нарисовать! Пример: /img кот")
 
         return
 
-    prompt = words[1]
+    prompt = words[1].strip()
 
     await message.answer("Рисую...")
 
     try:
 
-        encoded = urllib.parse.quote(prompt)
+        # Кодируем для URL
 
-        img_url = "https://image.pollinations.ai/prompt/" + encoded + "?width=1024&height=1024"
+        safe_prompt = prompt.replace(" ", "%20")
 
-        await message.answer_photo(photo=img_url, caption="Готово")
+        img_url = "https://image.pollinations.ai/prompt/" + safe_prompt + "?width=1024&height=1024&nologo=true"
+
+        print(f"DEBUG: Sending image URL: {img_url}")
+
+        await message.answer_photo(photo=img_url, caption=prompt)
+
+        print("DEBUG: Image sent successfully")
 
     except Exception as e:
 
-        print(f"DEBUG: ошибка картинки: {e}")
+        print(f"DEBUG: Image error: {e}")
 
-        await message.answer("Не вышло!")
+        await message.answer("Не вышло нарисовать! Попробуй другой запрос.")
 
 
 
 async def cmd_music(message):
 
-    print(f"DEBUG: /music от {message.from_user.username}")
-
     words = message.text.split(" ", 1)
+
     if len(words) < 2:
 
-        await message.answer("Напиши название песни! Пример: /music Imagine Dragons")
+        await message.answer("Напиши название! Пример: /music Imagine Dragons")
 
         return
 
     query = words[1].strip()
 
     await message.answer("Ищу музыку...")
-
     try:
 
-        ydl_opts = {
+        # Ищем на YouTube
 
-            'format': 'bestaudio/best',
+        search_query = urllib.parse.quote(query)
 
-            'outtmpl': '%(title)s.%(ext)s',
+        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
 
-            'quiet': True,
+        
 
-            'no_warnings': True
+        msg = "🎵 Вот что нашёл:\n\n"
 
-        }
+        msg += youtube_url + "\n\n"
 
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        msg += "Скачай музыку оттуда или послушай онлайн!"
 
-            info = ydl.extract_info(f"ytsearch:{query}", download=False)
+        
 
-            if info and 'entries' in info and len(info['entries']) > 0:
+        await message.answer(msg)
 
-                video = info['entries'][0]
-
-                video_url = video['url']
-
-                title = video['title']
-
-                await message.answer_audio(audio=video_url, caption=f"🎵 {title}")
-
-                print(f"DEBUG: музыка отправлена: {title}")
-
-            else:
-
-                await message.answer("Не нашёл такую песню!")
+        print("DEBUG: Music search sent")
 
     except Exception as e:
 
-        print(f"DEBUG: ошибка музыки: {e}")
+        print(f"DEBUG: Music error: {e}")
 
-        await message.answer("Не вышло скачать музыку!")
+        await message.answer("Не вышло найти музыку!")
+
+
+
+async def cmd_video(message):
+
+    words = message.text.split(" ", 1)
+
+    if len(words) < 2:
+
+        await message.answer("Напиши что найти! Пример: /video котики")
+
+        return
+
+    query = words[1].strip()
+
+    await message.answer("Ищу видео...")
+
+    try:
+
+        # Ищем на YouTube
+
+        search_query = urllib.parse.quote(query)
+        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
+
+        
+
+        msg = "🎬 Вот что нашёл:\n\n"
+
+        msg += youtube_url + "\n\n"
+
+        msg += "Смотри видео на YouTube!"
+
+        
+
+        await message.answer(msg)
+
+        print("DEBUG: Video search sent")
+
+    except Exception as e:
+
+        print(f"DEBUG: Video error: {e}")
+
+        await message.answer("Не вышло найти видео!")
+
 
 
 async def on_message(message):
-
-    print(f"DEBUG: получено сообщение в {message.chat.type}")
 
     try:
 
@@ -206,11 +226,9 @@ async def on_message(message):
 
         bot_id = me.id
 
-        print(f"DEBUG: bot_id={bot_id}")
-
     except Exception as e:
 
-        print(f"DEBUG: ошибка get_me: {e}")
+        print(f"DEBUG: get_me error: {e}")
 
         return
 
@@ -218,18 +236,13 @@ async def on_message(message):
 
     if not respond:
 
-        print("DEBUG: should_respond=False")
-
         return
-
-    print("DEBUG: обрабатываю...")
 
     chat_id = message.chat.id
 
     username = message.from_user.username
 
     if chat_id not in chat_history:
-
         chat_history[chat_id] = []
 
     messages = []
@@ -243,6 +256,7 @@ async def on_message(message):
     if chat_history[chat_id]:
 
         last_msgs = chat_history[chat_id][-3:]
+
         for msg in last_msgs:
 
             messages.append(msg)
@@ -265,11 +279,11 @@ async def on_message(message):
 
         await message.answer(ans)
 
-        print("DEBUG: отправлено успешно")
+        print("DEBUG: Message sent successfully")
 
     except Exception as e:
 
-        print(f"DEBUG: ошибка AI: {e}")
+        print(f"DEBUG: AI error: {e}")
 
         await message.answer("Ошибка")
 
@@ -278,10 +292,11 @@ async def on_message(message):
 def register_handlers():
 
     dp.message(Command("start"))(cmd_start)
-
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
+
+    dp.message(Command("video"))(cmd_video)
 
     dp.message()(on_message)
 
@@ -292,6 +307,7 @@ def register_handlers():
 def index():
 
     return "OK"
+
 
 
 def start_web():
