@@ -21,6 +21,8 @@ CREATORS = {
     "jojlolaxyu": "Mat"
 }
 
+KEYWORDS = ["cho второй", "cho 2", "сын мой", "сынок", "сыночка", "chos", "чос", "chosecond"]
+
 def get_system_prompt():
     return "Ty Cho Vtoroi - derzki AI-pomoshchnik. Otvechai TOLKO na russkom. Bud kratkim (1-2 predlozhenija). Mozhesh materitsja i shutit. Ne pishi bred."
 
@@ -31,13 +33,34 @@ def get_user_prompt(username):
     else:
         return "SOBESEDIK - obychnyj polzovatel. Otvechai derzko."
 
+def should_respond(message, bot_id):
+    """Проверяем нужно ли отвечать в группе"""
+    # В личке отвечаем всегда
+    if message.chat.type == "private":
+        return True
+    
+    text = message.text.lower() if message.text else ""
+    
+    # Проверяем ключевые слова
+    for keyword in KEYWORDS:
+        if keyword in text:
+            return True
+    
+    # Если упомянули бота
+    if bot.mentioned(message):        return True
+    
+    # Если ответ на сообщение бота
+    if message.reply_to_message:
+        if message.reply_to_message.from_user.id == bot_id:
+            return True
+    
+    return False
+
 async def generate_image(prompt):
-    """Генерация картинки через Pollinations.ai"""
     url = f"https://image.pollinations.ai/prompt/{prompt}?width=1024&height=1024&nologo=true"
     return url
 
 async def generate_music(prompt):
-    """Генерация музыки через MusicGen API"""
     try:
         async with aiohttp.ClientSession() as session:
             url = "https://api.musicgen.com/generate"
@@ -47,61 +70,60 @@ async def generate_music(prompt):
                     result = await resp.json()
                     return result.get("audio_url")
     except:
-        return None    return None
+        return None
+    return None
 
 @dp.message(Command("start"))
 async def cmd_start(message):
     u = message.from_user.username
     if u and u.lower() == "prostotponyatno":
-        await message.answer("Privet Otets!")
+        await message.answer("Привет, Отец!")
     elif u and u.lower() == "jojlolaxyu":
-        await message.answer("Privet Mat!")
+        await message.answer("Привет, Мать!")
     else:
-        await message.answer("Privet! Ja Cho Vtoroi.")
+        await message.answer("Привет! Я Cho Второй.")
 
 @dp.message(Command("img"))
 async def cmd_img(message):
     prompt = message.text.replace("/img", "").strip()
     if not prompt:
-        await message.answer("Napishi chto narisovat! Primer: /img kot v kosmose")
+        await message.answer("Напиши что нарисовать! Пример: /img кот в космосе")
         return
     
-    await message.answer("Risuju...")
+    await message.answer("Рисую...")
     
     try:
         img_url = await generate_image(prompt)
-        await message.answer_photo(photo=img_url, caption=f"Derzhi, blyad! {prompt}")
+        await message.answer_photo(photo=img_url, caption=f"Держи, блядь! {prompt}")
     except Exception as e:
-        await message.answer("Ne vyshlo narisovat, suka!")
-
+        await message.answer("Не вышло нарисовать, сука!")
 @dp.message(Command("music"))
 async def cmd_music(message):
     prompt = message.text.replace("/music", "").strip()
     if not prompt:
-        await message.answer("Napishi kakuyu muzyku sozdat! Primer: /music veselaya pesenka")
+        await message.answer("Напиши какую музыку создать! Пример: /music веселая песенка")
         return
     
-    await message.answer("Sozdayu muzyku...")
+    await message.answer("Создаю музыку...")
     
     try:
         audio_url = await generate_music(prompt)
         if audio_url:
-            await message.answer_audio(audio=audio_url, caption=f"Muzyka: {prompt}")
+            await message.answer_audio(audio=audio_url, caption=f"Музыка: {prompt}")
         else:
-            await message.answer("Ne poluchilos sozdat muzyku!")
+            await message.answer("Не получилось создать музыку!")
     except Exception as e:
-        await message.answer("Oshibka pri sozdanii muzyki!")
-
-@dp.message(Command("video"))
-async def cmd_video(message):
-    prompt = message.text.replace("/video", "").strip()
-    if not prompt:
-        await message.answer("Napishi chto snimit! Primer: /video kot tancuet")        return
-    
-    await message.answer("Video pokazu ne dostupno, izvini brat!")
+        await message.answer("Ошибка при создании музыки!")
 
 @dp.message()
 async def on_message(message):
+    me = await bot.me
+    bot_id = me.id
+    
+    # Проверяем нужно ли отвечать
+    if not should_respond(message, bot_id):
+        return
+    
     chat_id = message.chat.id
     user_id = message.from_user.id
     username = message.from_user.username
@@ -123,8 +145,7 @@ async def on_message(message):
     messages.append({"role": "user", "content": message.text})
     
     try:
-        r = client.chat.completions.create(
-            model="meta-llama/llama-3-8b-instruct",
+        r = client.chat.completions.create(            model="meta-llama/llama-3-8b-instruct",
             messages=messages,
             max_tokens=200,
             temperature=0.8
@@ -140,11 +161,12 @@ async def on_message(message):
         await message.answer(ans)
         
     except Exception as ex:
-        await message.answer("Oshibka")
+        await message.answer("Ошибка")
 
 @app.route("/")
 def index():
     return "OK"
+
 def start_web():
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
