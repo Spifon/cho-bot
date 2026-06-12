@@ -30,34 +30,36 @@ client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/
 
 chat_history = {}
 
-CREATORS = {"prostotponyatno": "Otets", "jojlolaxyu": "Mat"}
+CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
-KEYWORDS = ["cho vtoroi", "cho 2", "synok"]
+KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = "You are Cho Vtoroi. Answer ONLY in Russian. Be brief."
+SYSTEM_PROMPT = "Ты Cho Второй. Отвечай ТОЛЬКО на русском. Будь кратким."
 
 
 
 def get_user_prompt(username):
 
-    result = "Your partner is regular user. Be cheeky."
+    result = "Собеседник обычный. Будь дерзким."
 
     if username and username.lower() in CREATORS:
 
         role = CREATORS[username.lower()]
 
-        result = "Your partner is your " + role + ". Respect them."
+        result = "Собеседник твой " + role + ". Уважай его."
     return result
 
 
 
 def should_respond(message, bot_id):
 
-    result = False
+    print(f"DEBUG: тип={message.chat.type}, текст={message.text}")
 
     if message.chat.type == "private":
 
-        result = True
+        print("DEBUG: личка - отвечаю")
+
+        return True
 
     if message.text:
 
@@ -67,48 +69,58 @@ def should_respond(message, bot_id):
 
             if keyword in text:
 
-                result = True
+                print(f"DEBUG: найдено {keyword} - отвечаю")
+
+                return True
 
     if message.reply_to_message:
 
         if message.reply_to_message.from_user.id == bot_id:
 
-            result = True
+            print("DEBUG: ответ боту - отвечаю")
 
-    return result
+            return True
+
+    print("DEBUG: не отвечаю")
+
+    return False
 
 
 
 async def cmd_start(message):
 
+    print(f"DEBUG: /start от {message.from_user.username}")
+
     u = message.from_user.username
 
-    answer = "Privet! Ya Cho Vtoroi."
+    answer = "Привет! Я Cho Второй."
 
     if u and u.lower() == "prostotponyatno":
-
-        answer = "Privet Otets!"
+        answer = "Привет, Отец!"
 
     if u and u.lower() == "jojlolaxyu":
 
-        answer = "Privet Mat!"
+        answer = "Привет, Мать!"
 
     await message.answer(answer)
 
 
+
 async def cmd_img(message):
+
+    print(f"DEBUG: /img от {message.from_user.username}")
 
     words = message.text.split()
 
     if len(words) < 2:
 
-        await message.answer("Napishi chto narisovat!")
+        await message.answer("Напиши что нарисовать!")
 
         return
 
     prompt = words[1]
 
-    await message.answer("Risuyu...")
+    await message.answer("Рисую...")
 
     try:
 
@@ -116,25 +128,42 @@ async def cmd_img(message):
 
         img_url = "https://image.pollinations.ai/prompt/" + encoded + "?width=1024&height=1024"
 
-        await message.answer_photo(photo=img_url, caption="Gotovo")
+        await message.answer_photo(photo=img_url, caption="Готово")
 
-    except Exception:
+    except Exception as e:
 
-        await message.answer("Ne vyshlo!")
+        print(f"DEBUG: ошибка картинки: {e}")
+
+        await message.answer("Не вышло!")
 
 
 
 async def on_message(message):
 
-    me = await bot.get_me()
+    print(f"DEBUG: получено сообщение в {message.chat.type}")
 
-    bot_id = me.id
+    try:
+
+        me = await bot.get_me()
+        bot_id = me.id
+
+        print(f"DEBUG: bot_id={bot_id}")
+
+    except Exception as e:
+
+        print(f"DEBUG: ошибка get_me: {e}")
+
+        return
 
     respond = should_respond(message, bot_id)
 
     if not respond:
 
+        print("DEBUG: should_respond=False")
+
         return
+
+    print("DEBUG: обрабатываю...")
 
     chat_id = message.chat.id
 
@@ -145,6 +174,7 @@ async def on_message(message):
         chat_history[chat_id] = []
 
     messages = []
+
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     user_prompt = get_user_prompt(username)
@@ -164,7 +194,6 @@ async def on_message(message):
     try:
 
         r = client.chat.completions.create(model="meta-llama/llama-3-8b-instruct", messages=messages, max_tokens=200, temperature=0.8)
-
         ans = r.choices[0].message.content.strip()
 
         chat_history[chat_id].append({"role": "user", "content": message.text})
@@ -177,9 +206,13 @@ async def on_message(message):
 
         await message.answer(ans)
 
-    except Exception:
+        print("DEBUG: отправлено успешно")
 
-        await message.answer("Oshibka")
+    except Exception as e:
+
+        print(f"DEBUG: ошибка AI: {e}")
+
+        await message.answer("Ошибка")
 
 
 
@@ -194,6 +227,7 @@ def register_handlers():
 
 
 @app.route("/")
+
 def index():
 
     return "OK"
@@ -209,8 +243,9 @@ def start_web():
 
 
 if __name__ == "__main__":
-
     register_handlers()
+
+    print("DEBUG: бот запускается...")
 
     t = threading.Thread(target=start_web, daemon=True)
 
