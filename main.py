@@ -47,13 +47,6 @@ SYSTEM_PROMPT = """Ты Cho Второй - умный AI-помощник.
 
 БУДЬ АДЕКВАТНЫМ И ТОЧНЫМ!"""
 
-# СПИСОК МОДЕЛЕЙ (от лучшей к худшей)MODELS = [
-    "meta-llama/llama-3-8b-instruct:free",  # Основная
-    "google/gemma-2-9b-it:free",  # Резервная 1
-    "microsoft/phi-3-mini-128k-instruct:free",  # Резервная 2
-]
-
-
 
 def get_user_prompt(username):
 
@@ -96,6 +89,7 @@ def should_respond(message, bot_id):
 
 
 async def cmd_start(message):
+
     u = message.from_user.username
 
     answer = "Привет! Я Cho Второй."
@@ -103,7 +97,6 @@ async def cmd_start(message):
     if u and u.lower() == "prostotponyatno":
 
         answer = "Привет, Отец!"
-
     if u and u.lower() == "jojlolaxyu":
 
         answer = "Привет, Мать!"
@@ -145,12 +138,12 @@ async def cmd_img(message):
                 else:
 
                     await message.answer("Не вышло.")
+
     except Exception as e:
 
         print(f"DEBUG: Img error: {e}")
 
         await message.answer("Не вышло!")
-
 
 
 async def cmd_music(message):
@@ -187,13 +180,23 @@ async def cmd_video(message):
 
     await message.answer("Ищу видео...")
 
-    youtube_url = "https://www.youtube.com/results?search_query=" + urllib.parse.quote(query)
+    try:
 
-    await message.answer("🎬 YouTube:\n" + youtube_url)
+        search_query = urllib.parse.quote(query)
 
+        youtube_url = "https://www.youtube.com/results?search_query=" + search_query
+
+        msg = f"🎬 Нашёл:\n{youtube_url}"
+
+        await message.answer(msg)
+
+    except Exception as e:
+
+        await message.answer("Не вышло найти видео!")
 
 
 async def cmd_wiki(message):
+
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
@@ -241,8 +244,8 @@ async def cmd_wiki(message):
     
 
     if found_url:
-
         await message.answer("📚 Вот что нашёл:\n\n" + found_url)
+
     else:
 
         search_url = "https://www.fandom.com/search?q=" + urllib.parse.quote(query)
@@ -290,8 +293,18 @@ async def on_message(message):
     if not respond:
 
         return
+    
+
+    # ЭФФЕКТ "ДУМАЮ..."
+
+    thinking = await message.answer("🤔 В раздумьях...")
+
+    await asyncio.sleep(1.5)
+
+    
 
     chat_id = message.chat.id
+
     username = message.from_user.username
 
     if chat_id not in chat_history:
@@ -316,54 +329,44 @@ async def on_message(message):
 
     messages.append({"role": "user", "content": message.text})
 
-    
+    try:
 
-    # ПЫТАЕМСЯ ОТПРАВИТЬ ЧЕРЕЗ РАЗНЫЕ МОДЕЛИ
+        # QWEN 2.5 72B - САМАЯ УМНАЯ БЕСПЛАТНАЯ МОДЕЛЬ!
 
-    for i, model in enumerate(MODELS):
+        r = client.chat.completions.create(
 
-        try:
+            model="qwen/qwen-2.5-72b-instruct:free",
 
-            print(f"DEBUG: Trying model {model} (attempt {i+1})")
+            messages=messages,
 
-            r = client.chat.completions.create(
+            max_tokens=200,
 
-                model=model,
+            temperature=0.7
+        )
 
-                messages=messages,
+        ans = r.choices[0].message.content.strip()
 
-                max_tokens=200,
+        chat_history[chat_id].append({"role": "user", "content": message.text})
 
-                temperature=0.7
+        chat_history[chat_id].append({"role": "assistant", "content": ans})
 
-            )
+        if len(chat_history[chat_id]) > 6:
 
-            ans = r.choices[0].message.content.strip()
+            chat_history[chat_id] = chat_history[chat_id][-6:]
 
-            chat_history[chat_id].append({"role": "user", "content": message.text})
-            chat_history[chat_id].append({"role": "assistant", "content": ans})
+        
 
-            if len(chat_history[chat_id]) > 6:
+        await thinking.delete()
 
-                chat_history[chat_id] = chat_history[chat_id][-6:]
+        await message.answer(ans)
 
-            await message.answer(ans)
+    except Exception as e:
 
-            return  # УСПЕШНО - выходим
+        print(f"DEBUG: AI error: {e}")
 
-            
+        await thinking.delete()
 
-        except Exception as e:
-
-            print(f"DEBUG: Model {model} failed: {e}")
-
-            if i == len(MODELS) - 1:
-
-                # ПОСЛЕДНЯЯ МОДЕЛЬ ТОЖЕ НЕ РАБОТАЕТ
-
-                await message.answer("⚠️ Все модели недоступны. Попробуй позже.")
-
-            # ИНАЧЕ ПРОБУЕМ СЛЕДУЮЩУЮ МОДЕЛЬ
+        await message.answer("⚠️ Ошибка API. Попробуй позже.")
 
 
 
@@ -388,8 +391,8 @@ def register_handlers():
 @app.route("/")
 
 def index():
-
     return "OK"
+
 
 
 @app.route("/health")
@@ -437,5 +440,4 @@ if __name__ == "__main__":
     t = threading.Thread(target=start_web, daemon=True)
 
     t.start()
-
     asyncio.run(polling_with_restart())
