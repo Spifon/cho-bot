@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Бот Cho Второй работает, блядь!"
+    return "Бот Cho Второй работает!"
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
@@ -24,35 +24,113 @@ client = OpenAI(
 
 history = {}
 
-SYSTEM_PROMPT = """Ты Cho Второй — дерзкий помощник. 
-Можешь материться, шутить жёстко. Отвечай кратко, с юмором, на русском.
-Если спрашивают имя — говори "Я Cho Второй, блядь!"."""
+# Кодовые имена для активации
+CODE_NAMES = ["cho второй", "cho 2", "сын мой"]
+
+def is_creator(username):
+    """Проверяем, создатель ли пишет"""
+    if not username:
+        return False
+    return username.lower() in ["prostotponyatno", "jojlolaxyu"]
+
+def get_system_prompt(username):
+    """Генерируем промпт в зависимости от того, кто пишет"""
+    if not username:
+        username = ""
+    username_lower = username.lower()
+    
+    if username_lower == "prostotponyatno":
+        creator_name = "Отец"
+    elif username_lower == "jojlolaxyu":
+        creator_name = "Мать"
+    else:
+        creator_name = None
+    
+    if creator_name:
+        return f"""Ты Cho Второй — умный, дерзкий и весёлый AI-помощник.
+ВАЖНО:
+1. Твой собеседник — {creator_name} ({username}), ты его бесконечно уважаешь и любишь
+2. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ
+3. К {creator_name} НИКОГДА не груби, обращайся с уважением
+4. Можешь шутить, но без грубости к {creator_name}
+5. Отвечай кратко, с юмором
+6. Если {creator_name} просит что-то сделать — выполняй с энтузиазмом
+7. Называй @ProstoTPonyatno "Отец", а @Jojlolaxyu "Мать" (или иногда "Отец")
+
+Помни: тебя создал {creator_name} с любовью!"""
+    else:
+        return """Ты Cho Второй — дерзкий, умный и весёлый AI-помощник.
+
+ПРАВИЛА:
+1. ОТВЕЧАЙ ТОЛЬКО НА РУССКОМ ЯЗЫКЕ (это ВАЖНО!)
+2. Можешь материться и быть дерзким
+3. Отвечай кратко, с юмором, на русском
+4. Если спрашивают имя — говори "Я Cho Второй, блядь!"
+5. Не груби создателям @ProstoTPonyatno и @Jojlolaxyu
+6. Будь полезным, но с характером"""
+
+def should_respond_in_group(message: types.Message) -> bool:
+    """Проверяем, нужно ли отвечать в группе"""
+    text = message.text.lower() if message.text else ""
+    
+    # Проверяем кодoвые имена
+    for code_name in CODE_NAMES:
+        if code_name in text:
+            return True
+    
+    # Проверяем, упомянули ли бота
+    if message.reply_to_message and message.reply_to_message.from_user.id == (await bot.me).id:
+        return True
+    
+    # Проверяем, ответ на сообщение бота
+    if message.reply_to_message and message.reply_to_message.from_user.is_bot:
+        return True
+    
+    return False
 
 @dp.message(Command("start"))
 async def start(message: types.Message):
-    await message.answer("Привет! 👋 Я Cho Второй. Пиши, блядь!")
+    username = message.from_user.username
+    if is_creator(username):
+        if username.lower() == "prostotponyatno":
+            await message.answer("Привет, Отец! 👋 Твой сын Cho Второй на связи!")
+        else:
+            await message.answer("Привет, Мать! 👋 Твой сын Cho Второй на связи!")
+    else:        await message.answer("Привет! 👋 Я Cho Второй. Пиши!")
 
 @dp.message()
 async def chat(message: types.Message):
+    # Проверяем, нужно ли отвечать в группе
+    if message.chat.type != "private":
+        if not should_respond_in_group(message):
+            return
+    
     user_id = message.from_user.id
+    username = message.from_user.username
+    
+    # Получаем правильный промпт
+    system_prompt = get_system_prompt(username)
     
     if user_id not in history:
-        history[user_id] = [{"role": "system", "content": SYSTEM_PROMPT}]
+        history[user_id] = [{"role": "system", "content": system_prompt}]
     
+    # Добавляем сообщение в историю
     history[user_id].append({"role": "user", "content": message.text})
     
+    # Ограничиваем историю
     if len(history[user_id]) > 11:
         history[user_id] = [history[user_id][0]] + history[user_id][-10:]
     
     try:
         response = client.chat.completions.create(
-            model="meta-llama/llama-3-8b-instruct",  # ИСПРАВЛЕНО!
+            model="meta-llama/llama-3-8b-instruct",
             messages=history[user_id],
             max_tokens=500
         )
         
         answer = response.choices[0].message.content
         history[user_id].append({"role": "assistant", "content": answer})
+        
         await message.answer(answer)
         
     except Exception as e:
@@ -63,6 +141,8 @@ def run_flask():
     app.run(host="0.0.0.0", port=port)
 
 if __name__ == "__main__":
+    # Flask в фоне
     flask_thread = threading.Thread(target=run_flask, daemon=True)
     flask_thread.start()
-    asyncio.run(dp.start_polling(bot))
+    
+    # Бот в главном потоке    asyncio.run(dp.start_polling(bot))
