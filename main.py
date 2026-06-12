@@ -216,63 +216,131 @@ async def cmd_wiki(message):
 
     try:
 
-        search_query = urllib.parse.quote(query)
+        # ИСПОЛЬЗУЕМ ПРЯМОЙ ПОИСК ПО ВИКИ
 
-        url = "https://www.fandom.com/search?q=" + search_query
+        search_query = urllib.parse.quote(query)
 
         
 
-        async with aiohttp.ClientSession() as session:
+        # Пробуем найти на конкретных вики
 
-            async with session.get(url) as resp:
+        wikis = [
 
-                if resp.status == 200:
+            "https://ru.ultrokill.fandom.com",
 
-                    html = await resp.text()
+            "https://dota2.fandom.com/ru",
 
-                    soup = BeautifulSoup(html, 'html.parser')
+            "https://minecraft.fandom.com/ru",
 
-                    articles = soup.find_all('a', class_='title', limit=3)
+            "https://genshin.fandom.com/ru",
 
-                    if articles:
+            "https://anime.fandom.com/ru"
 
-                        result = "📚 Нашёл по запросу \"" + query + "\":\n\n"
+        ]
 
-                        for i, article in enumerate(articles, 1):
+        
 
-                            title = article.get_text(strip=True)
+        found = False
 
-                            link = article.get('href')
-                            if link:
+        result = "📚 Нашёл информацию:\n\n"
+        
 
-                                if not link.startswith('http'):
+        for wiki_base in wikis:
 
-                                    link = "https://www.fandom.com" + link
+            try:
 
-                                result += str(i) + ". " + title + "\n" + link + "\n\n"
+                search_url = wiki_base + "/wiki/Служебная:Поиск?query=" + search_query
 
-                        await message.answer(result)
+                
 
-                    else:
+                async with aiohttp.ClientSession() as session:
 
-                        await message.answer("Ничего не нашёл на Wiki!")
+                    async with session.get(search_url, timeout=5) as resp:
 
-                else:
+                        if resp.status == 200:
 
-                    await message.answer("Ошибка поиска!")
+                            html = await resp.text()
+
+                            soup = BeautifulSoup(html, 'html.parser')
+
+                            
+
+                            # Ищем заголовок статьи
+
+                            title = soup.find('h1', id='firstHeading')
+
+                            if title:
+
+                                result += "📖 " + title.get_text(strip=True) + "\n"
+
+                                result += "Источник: " + wiki_base + "\n\n"
+
+                                found = True
+
+                                break
+
+                            
+
+                            # Или ищем ссылки на статьи
+
+                            links = soup.find_all('a', href=True, limit=5)
+
+                            if links:
+
+                                for link in links:
+
+                                    href = link.get('href')
+
+                                    text = link.get_text(strip=True)
+                                    if href and '/wiki/' in href and text and len(text) > 3:
+
+                                        if not href.startswith('http'):
+
+                                            href = wiki_base + href
+
+                                        result += "• " + text + "\n" + href + "\n\n"
+
+                                        found = True
+
+                                        break
+
+                                if found:
+
+                                    result += "\nИсточник: " + wiki_base
+
+                                    break
+
+            except:
+
+                continue
+
+        
+
+        if found:
+
+            await message.answer(result)
+
+        else:
+
+            # Если не нашли на конкретных вики, даём общую ссылку
+
+            general_search = "https://www.fandom.com/search?q=" + search_query
+
+            await message.answer("📚 Попробуй поискать здесь:\n\n" + general_search)
+
+            
 
     except Exception as e:
 
         print(f"DEBUG: Wiki error: {e}")
 
-        await message.answer("Не вышло найти!")
+        await message.answer("Не вышло найти! Попробуй другую формулировку.")
 
 
 
 async def cmd_meme(message):
 
     words = message.text.split(" ", 1)
-
     if len(words) < 2:
 
         await message.answer("Напиши тему!")
@@ -292,6 +360,7 @@ async def cmd_meme(message):
 async def on_message(message):
 
     try:
+
         me = await bot.get_me()
 
         bot_id = me.id
@@ -321,7 +390,6 @@ async def on_message(message):
     messages.append({"role": "system", "content": SYSTEM_PROMPT})
 
     user_prompt = get_user_prompt(username)
-
     messages.append({"role": "system", "content": user_prompt})
 
     if chat_history[chat_id]:
@@ -341,6 +409,7 @@ async def on_message(message):
             model="meta-llama/llama-3-8b-instruct", 
 
             messages=messages, 
+
             max_tokens=200, 
 
             temperature=0.7
@@ -370,7 +439,6 @@ async def on_message(message):
 def register_handlers():
 
     dp.message(Command("start"))(cmd_start)
-
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
@@ -390,6 +458,7 @@ def register_handlers():
 def index():
 
     return "OK"
+
 
 
 @app.route("/health")
@@ -419,7 +488,6 @@ async def polling_with_restart():
             await dp.start_polling(bot)
 
         except Exception as e:
-
             print(f"DEBUG: Polling оборвался: {e}")
 
             print("DEBUG: Перезапускаю через 5 секунд...")
