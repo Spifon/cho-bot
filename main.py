@@ -30,7 +30,15 @@ dp = Dispatcher()
 
 
 
-client = Groq(api_key=GROQ_API_KEY)
+# ИСПРАВЛЕННАЯ ИНИЦИАЛИЗАЦИЯ GROQ
+
+client = Groq(
+
+    api_key=GROQ_API_KEY if GROQ_API_KEY else ""
+
+)
+
+
 
 chat_history = {}
 
@@ -39,12 +47,12 @@ chat_history = {}
 CREATORS = {
 
     "prostotponyatno": "Отец",
-
     "jojlolaxyu": "Мать",
 
     "chocho34562": "Дедушка"
 
 }
+
 
 
 INSULTS = [
@@ -88,7 +96,6 @@ SWEAR_RESPONSES = [
     "Пшёл вон, еблан! 😡",
 
     "Заткнись нахуй, тварь! 🤬",
-
     "Сам такой, пиздец! 😤",
 
     "Иди нахуй, дебил! 😡",
@@ -96,6 +103,7 @@ SWEAR_RESPONSES = [
     "Ебать тебя в рот! 😡",
 
     "Хуй тебе, а не ответ! 🖕",
+
     "Пошёл нахуй, сука! 😤",
 
     "Блядь, отстань! 🤬",
@@ -137,7 +145,6 @@ ROAST_RESPONSES = [
 
 
 EMOTIONAL_RESPONSES = {
-
     "привет": ["Привет! 😊", "Привет-привет! 👋", "О, привет! 😄"],
 
     "как дела": ["Отлично! А у тебя? 😊", "Супер! Работаю! ⚡", "Нормально! 😎"],
@@ -145,6 +152,7 @@ EMOTIONAL_RESPONSES = {
     "хорошо": ["Рад за тебя! 😊", "Круто! ", "Отлично!"],
 
     "круто": ["Ага, круто! 😎", "Согласен! ", "Ещё бы! 😄"],
+
     "спасибо": ["Пожалуйста! 😊", "Всегда рад! ", "Не за что!"],
 
     "плохо": ["Сочувствую... 😔 Всё наладится!", "Держись! 💪"],
@@ -186,7 +194,6 @@ INTELLIGENCE = {
 }
 
 
-
 CONVERSATION = [
 
     "Интересно! 😊",
@@ -194,6 +201,7 @@ CONVERSATION = [
     "Понимаю! 💭",
 
     "Да, бывает! 😄",
+
     "Круто! 🔥",
 
     "Хм... 🤔",
@@ -235,7 +243,6 @@ def calculate_math(text):
     if "√" in text or "корень" in text:
 
         try:
-
             match = re.search(r'[√\s]*(\d+)', text)
 
             if match:
@@ -243,6 +250,7 @@ def calculate_math(text):
                 num = int(match.group(1))
 
                 result = int(num ** 0.5)
+
                 return f"√{num} = {result}"
 
         except:
@@ -284,7 +292,6 @@ def get_response(text, username):
             return random.choice(ROAST_RESPONSES)
 
     math_result = calculate_math(text)
-
     if math_result:
 
         return math_result
@@ -292,6 +299,7 @@ def get_response(text, username):
     for question, answer in INTELLIGENCE.items():
 
         if question in text_lower:
+
             return answer
 
     for emotion, responses in EMOTIONAL_RESPONSES.items():
@@ -333,7 +341,6 @@ async def ask_groq(message_text, username):
             messages=[
 
                 {"role": "system", "content": system_prompt},
-
                 {"role": "user", "content": message_text}
 
             ],
@@ -341,6 +348,7 @@ async def ask_groq(message_text, username):
             max_tokens=200,
 
             temperature=0.7
+
         )
 
         return response.choices[0].message.content.strip()
@@ -382,7 +390,6 @@ def should_respond(message, bot_id):
 
 
 async def cmd_start(message):
-
     username = message.from_user.username
 
     if is_family(username):
@@ -390,6 +397,7 @@ async def cmd_start(message):
         role = CREATORS.get(username.lower(), "")
 
         await message.answer(f"Привет, {role}! 😊❤️")
+
     else:
 
         await message.answer("Привет! Я Cho Второй с AI! 😊")
@@ -431,12 +439,12 @@ async def cmd_music(message):
     query = words[1].strip()
 
     await message.answer("🎵 Ищу музыку...")
-
     short_query = query.replace(" ", "+")
 
     youtube_url = "https://youtube.com/results?search_query=" + short_query
 
     await message.answer("YouTube:\n" + youtube_url)
+
 
 
 async def cmd_video(message):
@@ -480,7 +488,6 @@ async def cmd_wiki(message):
     fandom_url = "https://fandom.com/search?q=" + short_query
 
     wiki_url = "https://ru.wikipedia.org/wiki/Служебная:Поиск?search=" + short_query
-
     msg = "Поиск:\n\nFandom: " + fandom_url + "\n\nWikipedia: " + wiki_url
 
     await message.answer(msg)
@@ -488,6 +495,7 @@ async def cmd_wiki(message):
 
 
 async def on_message(message):
+
     try:
 
         me = await bot.get_me()
@@ -529,7 +537,6 @@ async def on_message(message):
     await message.answer(response)
 
 
-
 def register_handlers():
 
     dp.message(Command("start"))(cmd_start)
@@ -537,6 +544,7 @@ def register_handlers():
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
+
     dp.message(Command("video"))(cmd_video)
 
     dp.message(Command("wiki"))(cmd_wiki)
@@ -578,12 +586,12 @@ async def polling_with_restart():
             print("DEBUG: Запускаю polling...")
 
             await dp.start_polling(bot)
-
         except Exception as e:
 
             print(f"DEBUG: Polling оборвался: {e}")
 
             await asyncio.sleep(5)
+
 
 
 if __name__ == "__main__":
