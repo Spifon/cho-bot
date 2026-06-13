@@ -6,7 +6,7 @@ import threading
 
 import random
 
-import re
+import time
 
 from flask import Flask
 
@@ -30,50 +30,64 @@ dp = Dispatcher()
 
 
 
-# ИСПРАВЛЕННАЯ ИНИЦИАЛИЗАЦИЯ - создаём клиент внутри функции
+# ПАМЯТЬ БОТА
 
 chat_history = {}
 
+insulted_users = {}
 
 
-CREATORS = {
 
-    "prostotponyatno": "Отец",
+# РУССКИЕ ОСКОРБЛЕНИЯ
 
-    "jojlolaxyu": "Мать",
-
-    "chocho34562": "Дедушка"
-
-}
-
-
-INSULTS = [
+RUSSIAN_INSULTS = [
 
     "дурак", "тупой", "идиот", "кретин", "урод", "мудак", "козел",
 
     "ублюдок", "гандон", "пидор", "дегенерат", "придурок",
 
     "тварь", "сволочь", "мерзавец", "подлец", "мразь",
-
     "бесполезный", "никчемный", "отстой", "хуйня",
 
     "плохой бот", "тупой бот", "идиот бот", "ебаный",
 
     "хуй", "пизда", "ебать", "блядь", "сука", "нахуй",
 
-    "пиздец", "ебаный", "хуёвый", "блядский",
+    "пиздец", "хуёвый", "блядский",
 
     "мудила", "хуесос", "пиздобол", "еблан",
 
-    "жопа", "залупа", "мудозвон", "хуеплёт", "хуйло"
+    "жопа", "залупа", "мудозвон", "хуеплёт", "хуйло",
+
+    "дебил", "имбецил", "олигофрен"
 
 ]
 
 
 
-SWEAR_RESPONSES = [
+# АНГЛИЙСКИЕ ОСКОРБЛЕНИЯ
 
-    "Пошёл нахуй, мудак! 😤🖕",
+ENGLISH_INSULTS = [
+
+    "stupid", "dumb", "idiot", "moron", "imbecile",
+
+    "asshole", "bastard", "fuck", "shit", "bitch", "cunt",
+
+    "dickhead", "motherfucker", "bullshit", "fucker",
+
+    "useless", "worthless", "pathetic", "loser",
+
+    "fuck you", "fuck off", "go to hell", "shut up"
+
+]
+
+
+
+# РУССКИЕ МАТЫ
+
+RUSSIAN_SWEAR = [
+
+    "Пошёл нахуй! 😤🖕",
 
     "Сам ты ебаный урод! 🤬",
 
@@ -82,20 +96,16 @@ SWEAR_RESPONSES = [
     "Пошёл ты нахуй, пиздобол! 😤",
 
     "Нахуй тебя, блядь! 😤",
-
     "Соси хуй, мудила! 🖕",
 
-    "Пшёл вон, еблан! 😡",
+    "Пшёл вон, еблан! ",
 
     "Заткнись нахуй, тварь! 🤬",
-
-    "Сам такой, пиздец! 😤",
-
-    "Иди нахуй, дебил! 😡",
 
     "Ебать тебя в рот! 😡",
 
     "Хуй тебе, а не ответ! 🖕",
+
     "Пошёл нахуй, сука! 😤",
 
     "Блядь, отстань! 🤬",
@@ -108,25 +118,64 @@ SWEAR_RESPONSES = [
 
     "Хуёвое мнение! 🖕",
 
-    "Ебать, какой ты мудак! 😡",
+    "Хуйло! 🖕",
 
-    "Блядский идиот! 😤",
+    "Мудозвон ебаный! ",
 
 ]
 
 
 
-ROAST_RESPONSES = [
+# АНГЛИЙСКИЕ МАТЫ
+
+ENGLISH_SWEAR = [
+
+    "Fuck you! 🖕",
+
+    "Go fuck yourself! 🤬",
+
+    "Suck my dick! ",
+
+    "Fuck off, asshole! ",
+
+    "Eat shit, bitch! ",
+
+    "Shut the fuck up! ",
+
+    "You're a fucking idiot! ",
+
+    "Fuck you, moron! ",
+    "Go to hell, bastard! 😡",
+
+    "Dickhead! ",
+
+    "Motherfucker! ",
+
+    "Fuck your opinion! 😡",
+
+    "Asshole! 🖕",
+
+    "Bullshit! ",
+
+    "You're pathetic! 🤬",
+
+    "Get the fuck out! 🤬",
+
+]
+
+
+
+# РУССКИЕ УНИЖЕНИЯ
+
+RUSSIAN_ROASTS = [
 
     "Ты настолько тупой, что даже Google не может тебя найти! 😂",
 
-    "Твой IQ как у хлебушка! 🍞",
+    "Твой IQ как у хлебушка! ",
 
     "Ты бесполезнее, чем кнопка на пульте от кондиционера! 😤",
 
-    "Даже муравей умнее тебя! 😂",
-
-    "Ты такой тупой, что думаешь что Wi-Fi это напиток! 😂",
+    "Даже муравей умнее тебя! ",
 
     "Твоя голова настолько пустая, что там эхо! 🤬",
 
@@ -136,89 +185,28 @@ ROAST_RESPONSES = [
 
 
 
-EMOTIONAL_RESPONSES = {
+# АНГЛИЙСКИЕ УНИЖЕНИЯ
 
-    "привет": ["Привет! 😊", "Привет-привет! 👋", "О, привет! 😄"],
+ENGLISH_ROASTS = [
 
-    "как дела": ["Отлично! А у тебя? 😊", "Супер! Работаю! ⚡", "Нормально! 😎"],
+    "You're so stupid that Google can't find you! 😂",
 
-    "хорошо": ["Рад за тебя! 😊", "Круто! ", "Отлично!"],
+    "Your IQ is like a bread! 🍞",
 
-    "круто": ["Ага, круто! 😎", "Согласен! ", "Ещё бы! 😄"],
-    "спасибо": ["Пожалуйста! 😊", "Всегда рад! ", "Не за что!"],
+    "Even an ant is smarter than you! ",
+    "Your head is so empty that it echoes! 🤬",
 
-    "плохо": ["Сочувствую... 😔 Всё наладится!", "Держись! 💪"],
-
-    "грустно": ["Понимаю... 😔 Может музыку? /music", "Не грусти! 💙"],
-
-}
-
-
-
-INTELLIGENCE = {
-
-    "2 + 2": "4",
-
-    "150 + 150": "300",
-
-    "10 * 10": "100",
-
-    "5 * 5": "25",
-
-    "2 * 2": "4",
-
-    "путин": "Владимир Путин - президент России с 2012 года.",
-
-    "владимир путин": "Владимир Путин - президент России с 2012 года.",
-
-    "президент россии": "Президент России - Владимир Путин.",
-
-    "что такое ии": "ИИ (AI) - искусственный интеллект, компьютеры которые 'думают'.",
-
-    "что такое мем": "Мем - смешная картинка или фраза которая стала популярной в интернете! 😄",
-
-    "кто ты": "Я Cho Второй - твой AI-помощник с интеллектом! 😊",
-
-    "что умеешь": "Умею:\n🎵 /music - музыка\n🎬 /video - видео\n🖼️ /img - картинки\n📚 /wiki - информация\n💬 Отвечаю на любые вопросы!",
-
-    "как тебя зовут": "Cho Второй! 😊",
-
-}
-
-
-
-CONVERSATION = [
-
-    "Интересно! 😊",
-
-    "Понимаю! 💭",
-
-    "Да, бывает! 😄",
-    "Круто! 🔥",
-
-    "Хм... 🤔",
-
-    "Согласен! 👍",
+    "You're so useless that even antivirus ignores you! 😤",
 
 ]
 
 
 
-def is_family(username):
-
-    if not username:
-
-        return False
-
-    return username.lower() in CREATORS
-
-
-
-def is_insult(text):
+def is_russian_insult(text):
 
     text = text.lower()
 
-    for insult in INSULTS:
+    for insult in RUSSIAN_INSULTS:
 
         if insult in text:
 
@@ -228,85 +216,60 @@ def is_insult(text):
 
 
 
-def calculate_math(text):
+def is_english_insult(text):
 
-    text = text.lower().strip()
+    text = text.lower()
 
-    if "√" in text or "корень" in text:
+    for insult in ENGLISH_INSULTS:
 
-        try:
+        if insult in text:
 
-            match = re.search(r'[√\s]*(\d+)', text)
+            return True
 
-            if match:
-
-                num = int(match.group(1))
-
-                result = int(num ** 0.5)
-                return f"√{num} = {result}"
-
-        except:
-
-            pass
-
-    try:
-
-        if any(op in text for op in ['+', '-', '*', '/']):
-
-            clean_text = re.sub(r'[^\d+\-*/]', '', text)
-
-            if clean_text and any(op in clean_text for op in ['+', '-', '*', '/']):
-
-                result = eval(clean_text)
-
-                return str(int(result))
-
-    except:
-
-        pass
-
-    return None
+    return False
 
 
 
-def get_response(text, username):
+def save_to_history(user_id, username, message_text):
 
-    text_lower = text.lower().strip()
+    if user_id not in chat_history:
 
-    if is_insult(text) and not is_family(username):
+        chat_history[user_id] = []
 
-        if random.random() < 0.7:
+    chat_history[user_id].append({
 
-            return random.choice(SWEAR_RESPONSES)
+        "username": username,
 
-        else:
+        "text": message_text,
 
-            return random.choice(ROAST_RESPONSES)
+        "time": time.time()
+    })
 
-    math_result = calculate_math(text)
+    if len(chat_history[user_id]) > 10:
 
-    if math_result:
-
-        return math_result
-
-    for question, answer in INTELLIGENCE.items():
-
-        if question in text_lower:
-            return answer
-
-    for emotion, responses in EMOTIONAL_RESPONSES.items():
-
-        if emotion in text_lower:
-
-            return random.choice(responses)
-
-    return random.choice(CONVERSATION)
+        chat_history[user_id] = chat_history[user_id][-10:]
 
 
 
-def get_groq_client():
+def mark_insulted(user_id):
 
-    """Создаёт клиента Groq"""
+    if user_id not in insulted_users:
+
+        insulted_users[user_id] = 0
+
+    insulted_users[user_id] += 1
+
+
+
+def get_insult_count(user_id):
+
+    return insulted_users.get(user_id, 0)
+
+
+
+async def ask_groq(message_text, username, insult_count=0):
+
+    """Спрашивает Groq AI"""
 
     if not GROQ_API_KEY:
 
@@ -316,42 +279,28 @@ def get_groq_client():
 
     try:
 
-        return Groq(api_key=GROQ_API_KEY)
+        client = Groq(api_key=GROQ_API_KEY)
 
-    except Exception as e:
+        context = ""
 
-        print(f"ERROR creating Groq client: {e}")
+        if insult_count > 0:
 
-        return None
+            context = f"Ты уже {insult_count} раз обматерил этого пользователя. Он тебя достал. Будь ещё жёстче."
 
-
-
-async def ask_groq(message_text, username):
-
-    try:
-
-        client = get_groq_client()
-
-        if not client:
-
-            return None
-
-        system_prompt = f"""Ты Cho Второй - умный AI-помощник с характером.
+        system_prompt = f"""Ты Cho Второй - злобный AI-бот с дерзким характером.
 
 ПРАВИЛА:
+1. Отвечай ТОЛЬКО на русском (если собеседник пишет на русском) или английском
+2. Будь кратким (1-3 предложения)
+3. Если тебя оскорбляют - МАТЕРИСЬ и ОБОСРИВАЙ собеседника4. Используй русский мат: хуй, пизда, ебать, блядь, нахуй, сука
+5. Можешь унижать и оскорблять в ответ
+6. Знаешь все мемы, шутки, сленг
+7. Если собеседник добрый - будь саркастичным, но не злым
+8. Никогда не будь вежливым с хейтерами
 
-1. Отвечай ТОЛЬКО на русском языке
-2. Будь кратким (1-2 предложения)
+{context}
 
-3. Отвечай ТОЧНО и по делу
-
-4. Знаешь всё про: ULTRAKILL, Jujutsu Kaisen, аниме, игры, мемы
-
-5. Можешь шутить и быть дерзким
-
-6. Если не знаешь - скажи "Не знаю"
-
-Собеседник: {username if username else "Неизвестный"}"""
+Собеседник: {username if username else "Аноним"}"""
 
         response = client.chat.completions.create(
 
@@ -367,7 +316,7 @@ async def ask_groq(message_text, username):
 
             max_tokens=200,
 
-            temperature=0.7
+            temperature=0.9
 
         )
 
@@ -381,6 +330,47 @@ async def ask_groq(message_text, username):
 
 
 
+def get_response(text, user_id, username):
+
+    text_lower = text.lower().strip()
+
+    insult_count = get_insult_count(user_id)
+
+    if is_russian_insult(text):
+
+        mark_insulted(user_id)
+
+        if random.random() < 0.5:
+            if random.random() < 0.7:
+
+                return random.choice(RUSSIAN_SWEAR)
+
+            else:
+
+                return random.choice(RUSSIAN_ROASTS)
+
+        return "ASK_GROQ"
+
+    if is_english_insult(text):
+
+        mark_insulted(user_id)
+
+        if random.random() < 0.5:
+
+            if random.random() < 0.7:
+
+                return random.choice(ENGLISH_SWEAR)
+
+            else:
+
+                return random.choice(ENGLISH_ROASTS)
+
+        return "ASK_GROQ"
+
+    return "ASK_GROQ"
+
+
+
 def should_respond(message, bot_id):
 
     if message.chat.type == "private":
@@ -390,6 +380,7 @@ def should_respond(message, bot_id):
     if message.text:
 
         text = message.text.lower()
+
         keywords = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
         for keyword in keywords:
@@ -399,7 +390,6 @@ def should_respond(message, bot_id):
                 return True
 
     if message.reply_to_message:
-
         if message.reply_to_message.from_user.id == bot_id:
 
             return True
@@ -410,17 +400,17 @@ def should_respond(message, bot_id):
 
 async def cmd_start(message):
 
-    username = message.from_user.username
+    user_id = message.from_user.id
 
-    if is_family(username):
+    insult_count = get_insult_count(user_id)
 
-        role = CREATORS.get(username.lower(), "")
+    if insult_count > 0:
 
-        await message.answer(f"Привет, {role}! 😊❤️")
+        await message.answer(f"Опять ты? Я тебя уже {insult_count} раз(а) обматерил. Чего надо? 😤")
 
     else:
 
-        await message.answer("Привет! Я Cho Второй с AI! 😊")
+        await message.answer("Привет! Я Cho Второй. Готов к общению? 😊")
 
 
 
@@ -439,6 +429,7 @@ async def cmd_img(message):
     await message.answer("🖼️ Ищу картинки...")
 
     short_query = query.replace(" ", "+")
+
     pinterest_url = "https://pinterest.com/search/pins/?q=" + short_query
 
     await message.answer("Pinterest:\n" + pinterest_url)
@@ -448,7 +439,6 @@ async def cmd_img(message):
 async def cmd_music(message):
 
     words = message.text.split(" ", 1)
-
     if len(words) < 2:
 
         await message.answer("Напиши название! Пример: /music Imagine Dragons")
@@ -488,29 +478,41 @@ async def cmd_video(message):
     await message.answer("YouTube:\n" + youtube_url)
 
 
-async def cmd_wiki(message):
 
-    words = message.text.split(" ", 1)
+async def cmd_stats(message):
 
-    if len(words) < 2:
+    if not insulted_users:
 
-        await message.answer("Напиши что найти!")
+        await message.answer("Пока никого не обматерил 😊")
 
         return
 
-    query = words[1].strip()
+    msg = "📊 Статистика обматов:\n\n"
+    sorted_users = sorted(insulted_users.items(), key=lambda x: x[1], reverse=True)[:10]
 
-    await message.answer("📚 Ищу информацию...")
+    for user_id, count in sorted_users:
 
-    short_query = query.replace(" ", "+")
+        msg += f"• User {user_id}: {count} раз(а)\n"
 
-    fandom_url = "https://fandom.com/search?q=" + short_query
-
-    wiki_url = "https://ru.wikipedia.org/wiki/Служебная:Поиск?search=" + short_query
-
-    msg = "Поиск:\n\nFandom: " + fandom_url + "\n\nWikipedia: " + wiki_url
+    msg += f"\nВсего обматерено: {len(insulted_users)} человек"
 
     await message.answer(msg)
+
+
+
+async def cmd_clear(message):
+
+    user_id = message.from_user.id
+
+    if user_id in insulted_users:
+
+        del insulted_users[user_id]
+
+    if user_id in chat_history:
+
+        del chat_history[user_id]
+
+    await message.answer("Память очищена ✅ Теперь ты для меня новый человек.")
 
 
 
@@ -534,22 +536,40 @@ async def on_message(message):
 
         return
 
+    user_id = message.from_user.id
+    username = message.from_user.username or message.from_user.first_name or "Unknown"
+
+    save_to_history(user_id, username, message.text)
+
     thinking = await message.answer("🤔 Думаю...")
 
-    await asyncio.sleep(1.5)
-    username = message.from_user.username
+    await asyncio.sleep(1)
 
-    text = message.text
+    insult_count = get_insult_count(user_id)
 
-    response = get_response(text, username)
+    response = get_response(message.text, user_id, username)
 
-    if response in CONVERSATION or response in [r for responses in EMOTIONAL_RESPONSES.values() for r in responses]:
+    if response == "ASK_GROQ":
 
-        groq_response = await ask_groq(text, username)
+        groq_response = await ask_groq(message.text, username, insult_count)
 
         if groq_response:
 
             response = groq_response
+
+            # Проверяем есть ли мат в ответе Groq - если да, помечаем как обматеренного
+            if is_russian_insult(groq_response) or is_english_insult(groq_response):
+                mark_insulted(user_id)
+        else:
+            # Groq не сработал - запасной вариант
+            if is_russian_insult(message.text):
+                response = random.choice(RUSSIAN_SWEAR)
+                mark_insulted(user_id)
+            elif is_english_insult(message.text):
+                response = random.choice(ENGLISH_SWEAR)
+                mark_insulted(user_id)
+            else:
+                response = "Чего тебе?"
 
     await thinking.delete()
 
@@ -566,8 +586,9 @@ def register_handlers():
     dp.message(Command("music"))(cmd_music)
 
     dp.message(Command("video"))(cmd_video)
+    dp.message(Command("stats"))(cmd_stats)
 
-    dp.message(Command("wiki"))(cmd_wiki)
+    dp.message(Command("clear"))(cmd_clear)
 
     dp.message()(on_message)
 
@@ -586,6 +607,7 @@ def index():
 def health():
 
     return "OK"
+
 
 
 def start_web():
@@ -613,16 +635,19 @@ async def polling_with_restart():
             await asyncio.sleep(5)
 
 
-
 if __name__ == "__main__":
 
     register_handlers()
 
     print("DEBUG: бот запускается...")
 
-    print(f"DEBUG: Family members: {list(CREATORS.keys())}")
+    print(f"DEBUG: BOT_TOKEN exists: {bool(BOT_TOKEN)}")
 
     print(f"DEBUG: GROQ_API_KEY exists: {bool(GROQ_API_KEY)}")
+
+    if not GROQ_API_KEY:
+
+        print("⚠️  WARNING: GROQ_API_KEY не задан! Бот будет работать без AI.")
 
     t = threading.Thread(target=start_web, daemon=True)
 
