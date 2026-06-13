@@ -6,15 +6,11 @@ import threading
 
 import urllib.parse
 
-import aiohttp
-
 from flask import Flask
 
 from aiogram import Bot, Dispatcher
 
 from aiogram.filters import Command
-
-from openai import OpenAI
 
 
 
@@ -22,13 +18,9 @@ app = Flask(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-OPENROUTER_API_KEY = os.environ.get("OPENROUTER_API_KEY")
-
 bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher()
-
-client = OpenAI(api_key=OPENROUTER_API_KEY, base_url="https://openrouter.ai/api/v1")
 
 chat_history = {}
 
@@ -36,18 +28,32 @@ CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
 
 KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
-SYSTEM_PROMPT = "Ты Cho Второй. Отвечай на русском. Будь кратким."
+
+
+# ПРОСТЫЕ ОТВЕТЫ
+
+SIMPLE_RESPONSES = {
+
+    "привет": "Привет! Я Cho Второй. Спрашивай что хочешь!",
+
+    "как дела": "Хорошо! Работаю как часы ⚙️",
+
+    "кто ты": "Я Cho Второй - твой AI-помощник. Помогаю с информацией, музыкой и картинками!",
+
+    "что умеешь": "Умею:\n🎵 Искать музыку /music\n🎬 Искать видео /video\n🖼️ Искать картинки /img\n📚 Искать инфо /wiki",
+
+}
 
 
 
 def get_user_prompt(username):
-
-    result = "Собеседник обычный."
+    result = ""
 
     if username and username.lower() in CREATORS:
 
         role = CREATORS[username.lower()]
-        result = "Собеседник твой " + role + ". Уважай его."
+
+        result = "Привет, " + role + "!"
 
     return result
 
@@ -90,10 +96,10 @@ async def cmd_start(message):
         answer = "Привет, Отец!"
 
     if u and u.lower() == "jojlolaxyu":
-
         answer = "Привет, Мать!"
 
     await message.answer(answer)
+
 
 
 async def cmd_img(message):
@@ -102,27 +108,19 @@ async def cmd_img(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши что нарисовать!")
+        await message.answer("Напиши что найти! Пример: /img кот")
 
         return
 
-    prompt = words[1].strip()
+    query = words[1].strip()
 
-    await message.answer("Рисую...")
+    await message.answer("🖼️ Ищу картинки...")
 
-    try:
+    short_query = query.replace(" ", "+")
 
-        safe_prompt = prompt.replace(" ", "_")
+    pinterest_url = "https://pinterest.com/search/pins/?q=" + short_query
 
-        img_url = "https://image.pollinations.ai/prompt/" + safe_prompt + "?width=1024&height=1024&nologo=true"
-
-        await message.answer_photo(photo=img_url, caption=prompt)
-
-    except Exception as e:
-
-        print(f"DEBUG: Img error: {e}")
-
-        await message.answer("Не вышло!")
+    await message.answer("Pinterest:\n" + pinterest_url)
 
 
 
@@ -132,17 +130,19 @@ async def cmd_music(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши название!")
+        await message.answer("Напиши название! Пример: /music Imagine Dragons")
 
         return
 
     query = words[1].strip()
 
+    await message.answer("🎵 Ищу музыку...")
+
     short_query = query.replace(" ", "+")
 
     youtube_url = "https://youtube.com/results?search_query=" + short_query
 
-    await message.answer("🎵 YouTube:\n" + youtube_url)
+    await message.answer("YouTube:\n" + youtube_url)
 
 
 async def cmd_video(message):
@@ -151,17 +151,19 @@ async def cmd_video(message):
 
     if len(words) < 2:
 
-        await message.answer("Напиши что найти!")
+        await message.answer("Напиши что найти! Пример: /video котики")
 
         return
 
     query = words[1].strip()
 
+    await message.answer("🎬 Ищу видео...")
+
     short_query = query.replace(" ", "+")
 
     youtube_url = "https://youtube.com/results?search_query=" + short_query
 
-    await message.answer("🎬 YouTube:\n" + youtube_url)
+    await message.answer("YouTube:\n" + youtube_url)
 
 
 
@@ -175,47 +177,23 @@ async def cmd_wiki(message):
 
         return
 
-    query = words[1].strip().lower()
+    query = words[1].strip()
 
-    wikis = {
+    await message.answer("📚 Ищу информацию...")
 
-        "ultrakill": "https://ultrakill.fandom.com",
+    short_query = query.replace(" ", "+")
 
-        "v1": "https://ultrakill.fandom.com/wiki/V1",
+    fandom_url = "https://fandom.com/search?q=" + short_query
 
-        "v2": "https://ultrakill.fandom.com/wiki/V2",
+    wiki_url = "https://ru.wikipedia.org/wiki/Служебная:Поиск?search=" + short_query
 
-        "gabriel": "https://ultrakill.fandom.com/wiki/Gabriel",
+    msg = "Поиск:\n\nFandom: " + fandom_url + "\n\nWikipedia: " + wiki_url
 
-        "dota": "https://dota2.fandom.com/ru"
-
-    }
-
-    found_url = None
-
-    for key, url in wikis.items():
-        if key in query:
-
-            found_url = url
-
-            break
-
-    if found_url:
-
-        await message.answer("📚 " + found_url)
-
-    else:
-
-        short_query = query.replace(" ", "+")
-
-        search_url = "https://fandom.com/search?q=" + short_query
-
-        await message.answer("📚 Fandom:\n" + search_url)
+    await message.answer(msg)
 
 
 
 async def on_message(message):
-
     try:
 
         me = await bot.get_me()
@@ -234,67 +212,52 @@ async def on_message(message):
 
         return
 
+    
+
+    # ЭФФЕКТ "ДУМАЮ"
+
     thinking = await message.answer("🤔 Думаю...")
 
-    await asyncio.sleep(1.5)
+    await asyncio.sleep(1)
 
-    chat_id = message.chat.id
+    
+
+    text = message.text.lower()
+
+    
+
+    # ПРОВЕРЯЕМ ПРОСТЫЕ ОТВЕТЫ
+
+    for key, response in SIMPLE_RESPONSES.items():
+
+        if key in text:
+
+            await thinking.delete()
+
+            await message.answer(response)
+
+            return
+
+    
+
+    # ПРОВЕРЯЕМ КТО ОБРАЩАЕТСЯ
 
     username = message.from_user.username
+    greeting = get_user_prompt(username)
 
-    if chat_id not in chat_history:
-        chat_history[chat_id] = []
+    
 
-    messages = []
+    # ПРОСТОЙ ОТВЕТ
 
-    messages.append({"role": "system", "content": SYSTEM_PROMPT})
+    await thinking.delete()
 
-    messages.append({"role": "system", "content": get_user_prompt(username)})
+    if greeting:
 
-    if chat_history[chat_id]:
+        await message.answer(greeting + " Чем помочь?")
 
-        last_msgs = chat_history[chat_id][-3:]
+    else:
 
-        for msg in last_msgs:
-
-            messages.append(msg)
-
-    messages.append({"role": "user", "content": message.text})
-
-    try:
-
-        r = client.chat.completions.create(
-
-            model="meta-llama/llama-3.1-8b-instruct:free",
-
-            messages=messages,
-
-            max_tokens=200,
-
-            temperature=0.7
-
-        )
-
-        ans = r.choices[0].message.content.strip()
-
-        chat_history[chat_id].append({"role": "user", "content": message.text})
-
-        chat_history[chat_id].append({"role": "assistant", "content": ans})
-
-        if len(chat_history[chat_id]) > 6:
-
-            chat_history[chat_id] = chat_history[chat_id][-6:]
-
-        await thinking.delete()
-
-        await message.answer(ans)
-
-    except Exception as e:
-
-        print(f"DEBUG: AI error: {e}")
-        await thinking.delete()
-
-        await message.answer("⚠️ Ошибка. Попробуй позже.")
+        await message.answer("Чем могу помочь? Используй команды:\n/music - музыка\n/video - видео\n/img - картинки\n/wiki - информация")
 
 
 
@@ -329,7 +292,6 @@ def health():
     return "OK"
 
 
-
 def start_web():
 
     port = int(os.environ.get("PORT", 10000))
@@ -341,6 +303,7 @@ def start_web():
 async def polling_with_restart():
 
     while True:
+
         try:
 
             print("DEBUG: Запускаю polling...")
