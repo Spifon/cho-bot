@@ -6,11 +6,15 @@ import threading
 
 import random
 
+import re
+
 from flask import Flask
 
 from aiogram import Bot, Dispatcher
 
 from aiogram.filters import Command
+
+from groq import Groq
 
 
 
@@ -18,13 +22,19 @@ app = Flask(__name__)
 
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+
 bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher()
 
 
 
-# СЕМЬЯ (не матерится на них)
+client = Groq(api_key=GROQ_API_KEY)
+
+chat_history = {}
+
+
 
 CREATORS = {
 
@@ -37,9 +47,6 @@ CREATORS = {
 }
 
 
-
-# ВСЕ РУССКИЕ МАТЫ И ОСКОРБЛЕНИЯ
-
 INSULTS = [
 
     "дурак", "тупой", "идиот", "кретин", "урод", "мудак", "козел",
@@ -47,6 +54,7 @@ INSULTS = [
     "ублюдок", "гандон", "пидор", "дегенерат", "придурок",
 
     "тварь", "сволочь", "мерзавец", "подлец", "мразь",
+
     "бесполезный", "никчемный", "отстой", "хуйня",
 
     "плохой бот", "тупой бот", "идиот бот", "ебаный",
@@ -57,15 +65,11 @@ INSULTS = [
 
     "мудила", "хуесос", "пиздобол", "еблан",
 
-    "жопа", "залупа", "мудозвон", "хуеплёт",
-
-    "пиздатый", "ебучий", "блядство", "хуйло"
+    "жопа", "залупа", "мудозвон", "хуеплёт", "хуйло"
 
 ]
 
 
-
-# МАТЕРНЫЕ ОТВЕТЫ (ЖЁСТКИЕ)
 
 SWEAR_RESPONSES = [
 
@@ -73,9 +77,9 @@ SWEAR_RESPONSES = [
 
     "Сам ты ебаный урод! 🤬",
 
-    "Иди нахуй, хуесос! ",
+    "Иди нахуй, хуесос! 😡",
 
-    "Пошёл ты нахуй, пиздобол! ",
+    "Пошёл ты нахуй, пиздобол! 😤",
 
     "Нахуй тебя, блядь! 😤",
 
@@ -87,32 +91,30 @@ SWEAR_RESPONSES = [
 
     "Сам такой, пиздец! 😤",
 
-    "Иди нахуй, дебил! ",
+    "Иди нахуй, дебил! 😡",
 
     "Ебать тебя в рот! 😡",
 
     "Хуй тебе, а не ответ! 🖕",
-
-    "Пошёл нахуй, сука! ",
+    "Пошёл нахуй, сука! 😤",
 
     "Блядь, отстань! 🤬",
-    "Ебаный в рот, мудак! ",
+
+    "Ебаный в рот, мудак! 😡",
 
     "Нахуй пошёл, уёбок! 🖕",
 
-    "Пиздец ты тупой! ",
+    "Пиздец ты тупой! 😤",
 
     "Хуёвое мнение! 🖕",
 
     "Ебать, какой ты мудак! 😡",
 
-    "Блядский идиот! ",
+    "Блядский идиот! 😤",
 
 ]
 
 
-
-# ОСКОРБЛЕНИЯ ДЛЯ ХЕЙТЕРОВ (ДОПОЛНИТЕЛЬНЫЕ)
 
 ROAST_RESPONSES = [
 
@@ -122,19 +124,17 @@ ROAST_RESPONSES = [
 
     "Ты бесполезнее, чем кнопка на пульте от кондиционера! 😤",
 
-    "Даже муравей умнее тебя! ",
+    "Даже муравей умнее тебя! 😂",
 
     "Ты такой тупой, что думаешь что Wi-Fi это напиток! 😂",
 
     "Твоя голова настолько пустая, что там эхо! 🤬",
 
-    "Ты настолько бесполезный, что даже антивирус тебя игнорирует! ",
+    "Ты настолько бесполезный, что даже антивирус тебя игнорирует! 😤",
 
 ]
 
 
-
-# ОБЫЧНЫЕ ОТВЕТЫ (для всех)
 
 EMOTIONAL_RESPONSES = {
 
@@ -144,7 +144,7 @@ EMOTIONAL_RESPONSES = {
 
     "хорошо": ["Рад за тебя! 😊", "Круто! ", "Отлично!"],
 
-    "круто": ["Ага, круто! ", "Согласен! ", "Ещё бы! 😄"],
+    "круто": ["Ага, круто! 😎", "Согласен! ", "Ещё бы! 😄"],
     "спасибо": ["Пожалуйста! 😊", "Всегда рад! ", "Не за что!"],
 
     "плохо": ["Сочувствую... 😔 Всё наладится!", "Держись! 💪"],
@@ -163,11 +163,25 @@ INTELLIGENCE = {
 
     "10 * 10": "100",
 
+    "5 * 5": "25",
+
+    "2 * 2": "4",
+
     "путин": "Владимир Путин - президент России с 2012 года.",
 
-    "кто ты": "Я Cho Второй - твой AI-помощник! 😊",
+    "владимир путин": "Владимир Путин - президент России с 2012 года.",
 
-    "что умеешь": "Умею:\n🎵 /music - музыка\n /video - видео\n🖼️ /img - картинки\n📚 /wiki - информация",
+    "президент россии": "Президент России - Владимир Путин.",
+
+    "что такое ии": "ИИ (AI) - искусственный интеллект, компьютеры которые 'думают'.",
+
+    "что такое мем": "Мем - смешная картинка или фраза которая стала популярной в интернете! 😄",
+
+    "кто ты": "Я Cho Второй - твой AI-помощник с интеллектом! 😊",
+
+    "что умеешь": "Умею:\n🎵 /music - музыка\n🎬 /video - видео\n🖼️ /img - картинки\n📚 /wiki - информация\n💬 Отвечаю на любые вопросы!",
+
+    "как тебя зовут": "Cho Второй! 😊",
 
 }
 
@@ -180,10 +194,9 @@ CONVERSATION = [
     "Понимаю! 💭",
 
     "Да, бывает! 😄",
-
     "Круто! 🔥",
 
-    "Хм... ",
+    "Хм... 🤔",
 
     "Согласен! 👍",
 
@@ -193,7 +206,6 @@ CONVERSATION = [
 
 def is_family(username):
 
-    """Проверяет является ли пользователь семьёй"""
     if not username:
 
         return False
@@ -203,8 +215,6 @@ def is_family(username):
 
 
 def is_insult(text):
-
-    """Проверяет есть ли в сообщении оскорбление или мат"""
 
     text = text.lower()
 
@@ -218,17 +228,52 @@ def is_insult(text):
 
 
 
+def calculate_math(text):
+
+    text = text.lower().strip()
+
+    if "√" in text or "корень" in text:
+
+        try:
+
+            match = re.search(r'[√\s]*(\d+)', text)
+
+            if match:
+
+                num = int(match.group(1))
+
+                result = int(num ** 0.5)
+                return f"√{num} = {result}"
+
+        except:
+
+            pass
+
+    try:
+
+        if any(op in text for op in ['+', '-', '*', '/']):
+
+            clean_text = re.sub(r'[^\d+\-*/]', '', text)
+
+            if clean_text and any(op in clean_text for op in ['+', '-', '*', '/']):
+
+                result = eval(clean_text)
+
+                return str(int(result))
+
+    except:
+
+        pass
+
+    return None
+
+
+
 def get_response(text, username):
 
     text_lower = text.lower().strip()
 
-    
-
-    # ЕСЛИ ОСКОРБЛЕНИЕ И НЕ СЕМЬЯ - ЖЁСТКО МАТЕРИМСЯ
-
     if is_insult(text) and not is_family(username):
-
-        # 70% шанс мата, 30% шанс роаста
 
         if random.random() < 0.7:
 
@@ -238,18 +283,16 @@ def get_response(text, username):
 
             return random.choice(ROAST_RESPONSES)
 
-    
+    math_result = calculate_math(text)
 
-    # СНАЧАЛА ИНТЕЛЛЕКТ
+    if math_result:
+
+        return math_result
 
     for question, answer in INTELLIGENCE.items():
+
         if question in text_lower:
-
             return answer
-
-    
-
-    # ПОТОМ ЭМОЦИИ
 
     for emotion, responses in EMOTIONAL_RESPONSES.items():
 
@@ -257,11 +300,56 @@ def get_response(text, username):
 
             return random.choice(responses)
 
-    
-
-    # СЛУЧАЙНАЯ ФРАЗА
-
     return random.choice(CONVERSATION)
+
+
+
+async def ask_groq(message_text, username):
+
+    try:
+
+        system_prompt = f"""Ты Cho Второй - умный AI-помощник с характером.
+
+ПРАВИЛА:
+
+1. Отвечай ТОЛЬКО на русском языке
+
+2. Будь кратким (1-2 предложения)
+
+3. Отвечай ТОЧНО и по делу
+
+4. Знаешь всё про: ULTRAKILL, Jujutsu Kaisen, аниме, игры, мемы
+
+5. Можешь шутить и быть дерзким
+
+6. Если не знаешь - скажи "Не знаю"
+
+Собеседник: {username if username else "Неизвестный"}"""
+
+        response = client.chat.completions.create(
+
+            model="llama-3.1-8b-instant",
+
+            messages=[
+
+                {"role": "system", "content": system_prompt},
+
+                {"role": "user", "content": message_text}
+
+            ],
+
+            max_tokens=200,
+
+            temperature=0.7
+        )
+
+        return response.choices[0].message.content.strip()
+
+    except Exception as e:
+
+        print(f"DEBUG: Groq error: {e}")
+
+        return None
 
 
 
@@ -292,6 +380,7 @@ def should_respond(message, bot_id):
     return False
 
 
+
 async def cmd_start(message):
 
     username = message.from_user.username
@@ -301,10 +390,9 @@ async def cmd_start(message):
         role = CREATORS.get(username.lower(), "")
 
         await message.answer(f"Привет, {role}! 😊❤️")
-
     else:
 
-        await message.answer("Привет! Я Cho Второй! 😊")
+        await message.answer("Привет! Я Cho Второй с AI! 😊")
 
 
 
@@ -341,6 +429,7 @@ async def cmd_music(message):
         return
 
     query = words[1].strip()
+
     await message.answer("🎵 Ищу музыку...")
 
     short_query = query.replace(" ", "+")
@@ -348,7 +437,6 @@ async def cmd_music(message):
     youtube_url = "https://youtube.com/results?search_query=" + short_query
 
     await message.answer("YouTube:\n" + youtube_url)
-
 
 
 async def cmd_video(message):
@@ -385,11 +473,12 @@ async def cmd_wiki(message):
 
     query = words[1].strip()
 
-    await message.answer(" Ищу информацию...")
+    await message.answer("📚 Ищу информацию...")
 
     short_query = query.replace(" ", "+")
 
     fandom_url = "https://fandom.com/search?q=" + short_query
+
     wiki_url = "https://ru.wikipedia.org/wiki/Служебная:Поиск?search=" + short_query
 
     msg = "Поиск:\n\nFandom: " + fandom_url + "\n\nWikipedia: " + wiki_url
@@ -399,7 +488,6 @@ async def cmd_wiki(message):
 
 
 async def on_message(message):
-
     try:
 
         me = await bot.get_me()
@@ -424,7 +512,17 @@ async def on_message(message):
 
     username = message.from_user.username
 
-    response = get_response(message.text, username)
+    text = message.text
+
+    response = get_response(text, username)
+
+    if response in CONVERSATION or response in [r for responses in EMOTIONAL_RESPONSES.values() for r in responses]:
+
+        groq_response = await ask_groq(text, username)
+
+        if groq_response:
+
+            response = groq_response
 
     await thinking.delete()
 
@@ -495,6 +593,8 @@ if __name__ == "__main__":
     print("DEBUG: бот запускается...")
 
     print(f"DEBUG: Family members: {list(CREATORS.keys())}")
+
+    print(f"DEBUG: GROQ_API_KEY exists: {bool(GROQ_API_KEY)}")
 
     t = threading.Thread(target=start_web, daemon=True)
 
