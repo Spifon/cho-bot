@@ -30,15 +30,7 @@ dp = Dispatcher()
 
 
 
-# ИСПРАВЛЕННАЯ ИНИЦИАЛИЗАЦИЯ GROQ
-
-client = Groq(
-
-    api_key=GROQ_API_KEY if GROQ_API_KEY else ""
-
-)
-
-
+# ИСПРАВЛЕННАЯ ИНИЦИАЛИЗАЦИЯ - создаём клиент внутри функции
 
 chat_history = {}
 
@@ -47,12 +39,12 @@ chat_history = {}
 CREATORS = {
 
     "prostotponyatno": "Отец",
+
     "jojlolaxyu": "Мать",
 
     "chocho34562": "Дедушка"
 
 }
-
 
 
 INSULTS = [
@@ -96,6 +88,7 @@ SWEAR_RESPONSES = [
     "Пшёл вон, еблан! 😡",
 
     "Заткнись нахуй, тварь! 🤬",
+
     "Сам такой, пиздец! 😤",
 
     "Иди нахуй, дебил! 😡",
@@ -103,7 +96,6 @@ SWEAR_RESPONSES = [
     "Ебать тебя в рот! 😡",
 
     "Хуй тебе, а не ответ! 🖕",
-
     "Пошёл нахуй, сука! 😤",
 
     "Блядь, отстань! 🤬",
@@ -145,6 +137,7 @@ ROAST_RESPONSES = [
 
 
 EMOTIONAL_RESPONSES = {
+
     "привет": ["Привет! 😊", "Привет-привет! 👋", "О, привет! 😄"],
 
     "как дела": ["Отлично! А у тебя? 😊", "Супер! Работаю! ⚡", "Нормально! 😎"],
@@ -152,7 +145,6 @@ EMOTIONAL_RESPONSES = {
     "хорошо": ["Рад за тебя! 😊", "Круто! ", "Отлично!"],
 
     "круто": ["Ага, круто! 😎", "Согласен! ", "Ещё бы! 😄"],
-
     "спасибо": ["Пожалуйста! 😊", "Всегда рад! ", "Не за что!"],
 
     "плохо": ["Сочувствую... 😔 Всё наладится!", "Держись! 💪"],
@@ -194,6 +186,7 @@ INTELLIGENCE = {
 }
 
 
+
 CONVERSATION = [
 
     "Интересно! 😊",
@@ -201,7 +194,6 @@ CONVERSATION = [
     "Понимаю! 💭",
 
     "Да, бывает! 😄",
-
     "Круто! 🔥",
 
     "Хм... 🤔",
@@ -243,6 +235,7 @@ def calculate_math(text):
     if "√" in text or "корень" in text:
 
         try:
+
             match = re.search(r'[√\s]*(\d+)', text)
 
             if match:
@@ -250,7 +243,6 @@ def calculate_math(text):
                 num = int(match.group(1))
 
                 result = int(num ** 0.5)
-
                 return f"√{num} = {result}"
 
         except:
@@ -292,6 +284,7 @@ def get_response(text, username):
             return random.choice(ROAST_RESPONSES)
 
     math_result = calculate_math(text)
+
     if math_result:
 
         return math_result
@@ -299,7 +292,6 @@ def get_response(text, username):
     for question, answer in INTELLIGENCE.items():
 
         if question in text_lower:
-
             return answer
 
     for emotion, responses in EMOTIONAL_RESPONSES.items():
@@ -312,16 +304,43 @@ def get_response(text, username):
 
 
 
+def get_groq_client():
+
+    """Создаёт клиента Groq"""
+
+    if not GROQ_API_KEY:
+
+        print("ERROR: GROQ_API_KEY not set!")
+
+        return None
+
+    try:
+
+        return Groq(api_key=GROQ_API_KEY)
+
+    except Exception as e:
+
+        print(f"ERROR creating Groq client: {e}")
+
+        return None
+
+
+
 async def ask_groq(message_text, username):
 
     try:
+
+        client = get_groq_client()
+
+        if not client:
+
+            return None
 
         system_prompt = f"""Ты Cho Второй - умный AI-помощник с характером.
 
 ПРАВИЛА:
 
 1. Отвечай ТОЛЬКО на русском языке
-
 2. Будь кратким (1-2 предложения)
 
 3. Отвечай ТОЧНО и по делу
@@ -341,6 +360,7 @@ async def ask_groq(message_text, username):
             messages=[
 
                 {"role": "system", "content": system_prompt},
+
                 {"role": "user", "content": message_text}
 
             ],
@@ -370,7 +390,6 @@ def should_respond(message, bot_id):
     if message.text:
 
         text = message.text.lower()
-
         keywords = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
         for keyword in keywords:
@@ -390,6 +409,7 @@ def should_respond(message, bot_id):
 
 
 async def cmd_start(message):
+
     username = message.from_user.username
 
     if is_family(username):
@@ -419,7 +439,6 @@ async def cmd_img(message):
     await message.answer("🖼️ Ищу картинки...")
 
     short_query = query.replace(" ", "+")
-
     pinterest_url = "https://pinterest.com/search/pins/?q=" + short_query
 
     await message.answer("Pinterest:\n" + pinterest_url)
@@ -439,6 +458,7 @@ async def cmd_music(message):
     query = words[1].strip()
 
     await message.answer("🎵 Ищу музыку...")
+
     short_query = query.replace(" ", "+")
 
     youtube_url = "https://youtube.com/results?search_query=" + short_query
@@ -468,7 +488,6 @@ async def cmd_video(message):
     await message.answer("YouTube:\n" + youtube_url)
 
 
-
 async def cmd_wiki(message):
 
     words = message.text.split(" ", 1)
@@ -488,6 +507,7 @@ async def cmd_wiki(message):
     fandom_url = "https://fandom.com/search?q=" + short_query
 
     wiki_url = "https://ru.wikipedia.org/wiki/Служебная:Поиск?search=" + short_query
+
     msg = "Поиск:\n\nFandom: " + fandom_url + "\n\nWikipedia: " + wiki_url
 
     await message.answer(msg)
@@ -517,7 +537,6 @@ async def on_message(message):
     thinking = await message.answer("🤔 Думаю...")
 
     await asyncio.sleep(1.5)
-
     username = message.from_user.username
 
     text = message.text
@@ -535,6 +554,7 @@ async def on_message(message):
     await thinking.delete()
 
     await message.answer(response)
+
 
 
 def register_handlers():
@@ -568,7 +588,6 @@ def health():
     return "OK"
 
 
-
 def start_web():
 
     port = int(os.environ.get("PORT", 10000))
@@ -586,6 +605,7 @@ async def polling_with_restart():
             print("DEBUG: Запускаю polling...")
 
             await dp.start_polling(bot)
+
         except Exception as e:
 
             print(f"DEBUG: Polling оборвался: {e}")
