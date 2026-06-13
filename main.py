@@ -4,7 +4,7 @@ import asyncio
 
 import threading
 
-import urllib.parse
+import random
 
 from flask import Flask
 
@@ -22,40 +22,138 @@ bot = Bot(token=BOT_TOKEN)
 
 dp = Dispatcher()
 
-chat_history = {}
-
-CREATORS = {"prostotponyatno": "Отец", "jojlolaxyu": "Мать"}
-
-KEYWORDS = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
 
 
+MOODS = ["весёлый", "спокойный", "энергичный", "задумчивый"]
 
-# ПРОСТЫЕ ОТВЕТЫ
+current_mood = random.choice(MOODS)
 
-SIMPLE_RESPONSES = {
 
-    "привет": "Привет! Я Cho Второй. Спрашивай что хочешь!",
 
-    "как дела": "Хорошо! Работаю как часы ⚙️",
+EMOTIONAL_RESPONSES = {
 
-    "кто ты": "Я Cho Второй - твой AI-помощник. Помогаю с информацией, музыкой и картинками!",
+    "привет": ["Привет! 😊", "Привет-привет! 👋", "О, привет! Давно не виделись! 😄"],
 
-    "что умеешь": "Умею:\n🎵 Искать музыку /music\n🎬 Искать видео /video\n🖼️ Искать картинки /img\n📚 Искать инфо /wiki",
+    "как дела": ["Отлично! А у тебя? 😊", "Супер! Работаю на полную! ⚡", "Нормально, не жалуюсь! 😎"],
+
+    "хорошо": ["Рад за тебя! 😊", "Круто! Так держать! ", "Отлично! Я тоже в порядке!"],
+
+    "круто": ["Ага, круто! 😎", "Согласен! ", "Ещё бы! 😄"],
+
+    "плохо": ["Ох, сочувствую... 😔 Всё наладится!", "Держись! 💪 Расскажешь что случилось?", "Жаль... Хочешь поговорить об этом?"],
+
+    "грустно": ["Понимаю... 😔 Может музыка поможет? /music", "Не грусти! Всё будет хорошо! 💙", "Обнимаю! 🤗 Всё наладится!"],
+
+    "устал": ["Отдохни!  Ты заслужил!", "Понимаю... Работа - не волк! 😄", "Сил тебе! 💪 Отдыхай!"],
+
+    "бесит": ["Понимаю... 😤 Иногда тоже бесит всё!", "Ох, знакомое чувство... 😤", "Держись! 💪 Не нервничай!"],
+    "злюсь": ["Выпусти пар! 😤 Может музыку включить? /music", "Понимаю... Не кипишуй! 😎 Всё решится!"],
+
+    "вау": ["Да! 😲 Круто же!", "Сам в шоке! 😄", "Правда круто! 🔥"],
+
+    "ого": ["Вот это да! 😲", "Не ожидал! 😄", "Да, неожиданно!"],
+
+    "люблю": ["Взаимно! ❤️", "Ох, польщён! 😊❤️", "И я тебя! 💙"],
+
+    "ты лучший": ["Спасибо! 😊 Ты тоже крутой!", "Ох, спасибо! 💙", "Стараюсь! 😎"],
+
+    "скучно": ["Давай поболтаем! 😊 О чём хочешь?", "Не скучай! 😄 Может музыку? /music", "Понимаю... Давай что-нибудь придумаем!"],
+
+    "нечего делать": ["Закажи музыку! /music 🎵", "Посмотри картинки! /img коты 😄", "Найди видео! /video смешное 😄"],
 
 }
 
 
 
-def get_user_prompt(username):
-    result = ""
+INTELLIGENCE = {
 
-    if username and username.lower() in CREATORS:
+    "2 + 2": "4",
 
-        role = CREATORS[username.lower()]
+    "150 + 150": "300",
 
-        result = "Привет, " + role + "!"
+    "10 * 10": "100",
 
-    return result
+    "сколько будет": "Хм... давай посчитаю... 🤔",
+
+    "кто такой путин": "Владимир Путин - президент России с 2012 года.",
+
+    "что такое ии": "ИИ (AI) - искусственный интеллект, компьютеры которые 'думают'.",
+
+    "что такое мем": "Мем - смешная картинка или фраза которая стала популярной в интернете! 😄",
+
+    "кто ты": ["Я Cho Второй - твой AI-помощник! 😊", "Я бот который помогает с музыкой, видео и картинками!", "Я Cho Второй! Всегда на связи! 💙"],
+
+    "что умеешь": "Умею:\n🎵 /music - искать музыку\n /video - искать видео\n🖼️ /img - искать картинки\n📚 /wiki - искать информацию",
+
+}
+
+
+
+CONVERSATION = [
+
+    "Интересно... Расскажи подробнее! 😊",
+
+    "Понимаю тебя! 💭",
+
+    "Да, бывает! 😄",
+    "Круто! 🔥",
+
+    "Расскажи ещё!",
+
+    "Я слушаю... 👂",
+
+    "Хм... ",
+
+    "Согласен! 👍",
+
+]
+
+
+
+def get_emotional_response(text):
+
+    text = text.lower().strip()
+
+    for emotion, responses in EMOTIONAL_RESPONSES.items():
+
+        if emotion in text:
+
+            return random.choice(responses)
+
+    for question, answer in INTELLIGENCE.items():
+
+        if question in text:
+
+            if isinstance(answer, list):
+
+                return random.choice(answer)
+
+            return answer
+
+    return random.choice(CONVERSATION)
+
+
+
+def detect_mood(text):
+
+    text = text.lower()
+
+    if any(word in text for word in ["привет", "хорошо", "круто", "отлично"]):
+
+        return "весёлый"
+
+    elif any(word in text for word in ["плохо", "грустно", "устал"]):
+
+        return "грустный"
+    elif any(word in text for word in ["бесит", "злюсь", "ненавижу"]):
+
+        return "злой"
+
+    elif any(word in text for word in ["вау", "ого", "невероятно"]):
+
+        return "удивлённый"
+
+    return "спокойный"
 
 
 
@@ -69,7 +167,9 @@ def should_respond(message, bot_id):
 
         text = message.text.lower()
 
-        for keyword in KEYWORDS:
+        keywords = ["cho vtoroi", "cho 2", "synok", "cho второй", "сынок", "сын мой"]
+
+        for keyword in keywords:
 
             if keyword in text:
 
@@ -87,23 +187,13 @@ def should_respond(message, bot_id):
 
 async def cmd_start(message):
 
-    u = message.from_user.username
+    responses = ["Привет! Я Cho Второй! 😊", "Привет-привет! 👋", "О, привет! Рад видеть! 😄"]
 
-    answer = "Привет! Я Cho Второй."
-
-    if u and u.lower() == "prostotponyatno":
-
-        answer = "Привет, Отец!"
-
-    if u and u.lower() == "jojlolaxyu":
-        answer = "Привет, Мать!"
-
-    await message.answer(answer)
+    await message.answer(random.choice(responses))
 
 
 
 async def cmd_img(message):
-
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
@@ -145,6 +235,7 @@ async def cmd_music(message):
     await message.answer("YouTube:\n" + youtube_url)
 
 
+
 async def cmd_video(message):
 
     words = message.text.split(" ", 1)
@@ -152,7 +243,6 @@ async def cmd_video(message):
     if len(words) < 2:
 
         await message.answer("Напиши что найти! Пример: /video котики")
-
         return
 
     query = words[1].strip()
@@ -179,7 +269,7 @@ async def cmd_wiki(message):
 
     query = words[1].strip()
 
-    await message.answer("📚 Ищу информацию...")
+    await message.answer(" Ищу информацию...")
 
     short_query = query.replace(" ", "+")
 
@@ -194,6 +284,7 @@ async def cmd_wiki(message):
 
 
 async def on_message(message):
+
     try:
 
         me = await bot.get_me()
@@ -201,7 +292,6 @@ async def on_message(message):
         bot_id = me.id
 
     except Exception as e:
-
         print(f"DEBUG: get_me error: {e}")
 
         return
@@ -212,52 +302,19 @@ async def on_message(message):
 
         return
 
-    
-
-    # ЭФФЕКТ "ДУМАЮ"
-
     thinking = await message.answer("🤔 Думаю...")
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(1.5)
 
-    
+    global current_mood
 
-    text = message.text.lower()
+    current_mood = detect_mood(message.text)
 
-    
-
-    # ПРОВЕРЯЕМ ПРОСТЫЕ ОТВЕТЫ
-
-    for key, response in SIMPLE_RESPONSES.items():
-
-        if key in text:
-
-            await thinking.delete()
-
-            await message.answer(response)
-
-            return
-
-    
-
-    # ПРОВЕРЯЕМ КТО ОБРАЩАЕТСЯ
-
-    username = message.from_user.username
-    greeting = get_user_prompt(username)
-
-    
-
-    # ПРОСТОЙ ОТВЕТ
+    response = get_emotional_response(message.text)
 
     await thinking.delete()
 
-    if greeting:
-
-        await message.answer(greeting + " Чем помочь?")
-
-    else:
-
-        await message.answer("Чем могу помочь? Используй команды:\n/music - музыка\n/video - видео\n/img - картинки\n/wiki - информация")
+    await message.answer(response)
 
 
 
@@ -284,12 +341,12 @@ def index():
     return "OK"
 
 
-
 @app.route("/health")
 
 def health():
 
     return "OK"
+
 
 
 def start_web():
