@@ -24,42 +24,132 @@ dp = Dispatcher()
 
 
 
-MOODS = ["весёлый", "спокойный", "энергичный", "задумчивый"]
+# СЕМЬЯ (не матерится на них)
 
-current_mood = random.choice(MOODS)
+CREATORS = {
+
+    "prostotponyatno": "Отец",
+
+    "jojlolaxyu": "Мать",
+
+    "chocho34562": "Дедушка"
+
+}
 
 
+
+# ВСЕ РУССКИЕ МАТЫ И ОСКОРБЛЕНИЯ
+
+INSULTS = [
+
+    "дурак", "тупой", "идиот", "кретин", "урод", "мудак", "козел",
+
+    "ублюдок", "гандон", "пидор", "дегенерат", "придурок",
+
+    "тварь", "сволочь", "мерзавец", "подлец", "мразь",
+    "бесполезный", "никчемный", "отстой", "хуйня",
+
+    "плохой бот", "тупой бот", "идиот бот", "ебаный",
+
+    "хуй", "пизда", "ебать", "блядь", "сука", "нахуй",
+
+    "пиздец", "ебаный", "хуёвый", "блядский",
+
+    "мудила", "хуесос", "пиздобол", "еблан",
+
+    "жопа", "залупа", "мудозвон", "хуеплёт",
+
+    "пиздатый", "ебучий", "блядство", "хуйло"
+
+]
+
+
+
+# МАТЕРНЫЕ ОТВЕТЫ (ЖЁСТКИЕ)
+
+SWEAR_RESPONSES = [
+
+    "Пошёл нахуй, мудак! 😤🖕",
+
+    "Сам ты ебаный урод! 🤬",
+
+    "Иди нахуй, хуесос! ",
+
+    "Пошёл ты нахуй, пиздобол! ",
+
+    "Нахуй тебя, блядь! 😤",
+
+    "Соси хуй, мудила! 🖕",
+
+    "Пшёл вон, еблан! 😡",
+
+    "Заткнись нахуй, тварь! 🤬",
+
+    "Сам такой, пиздец! 😤",
+
+    "Иди нахуй, дебил! ",
+
+    "Ебать тебя в рот! 😡",
+
+    "Хуй тебе, а не ответ! 🖕",
+
+    "Пошёл нахуй, сука! ",
+
+    "Блядь, отстань! 🤬",
+    "Ебаный в рот, мудак! ",
+
+    "Нахуй пошёл, уёбок! 🖕",
+
+    "Пиздец ты тупой! ",
+
+    "Хуёвое мнение! 🖕",
+
+    "Ебать, какой ты мудак! 😡",
+
+    "Блядский идиот! ",
+
+]
+
+
+
+# ОСКОРБЛЕНИЯ ДЛЯ ХЕЙТЕРОВ (ДОПОЛНИТЕЛЬНЫЕ)
+
+ROAST_RESPONSES = [
+
+    "Ты настолько тупой, что даже Google не может тебя найти! 😂",
+
+    "Твой IQ как у хлебушка! 🍞",
+
+    "Ты бесполезнее, чем кнопка на пульте от кондиционера! 😤",
+
+    "Даже муравей умнее тебя! ",
+
+    "Ты такой тупой, что думаешь что Wi-Fi это напиток! 😂",
+
+    "Твоя голова настолько пустая, что там эхо! 🤬",
+
+    "Ты настолько бесполезный, что даже антивирус тебя игнорирует! ",
+
+]
+
+
+
+# ОБЫЧНЫЕ ОТВЕТЫ (для всех)
 
 EMOTIONAL_RESPONSES = {
 
-    "привет": ["Привет! 😊", "Привет-привет! 👋", "О, привет! Давно не виделись! 😄"],
+    "привет": ["Привет! 😊", "Привет-привет! 👋", "О, привет! 😄"],
 
-    "как дела": ["Отлично! А у тебя? 😊", "Супер! Работаю на полную! ⚡", "Нормально, не жалуюсь! 😎"],
+    "как дела": ["Отлично! А у тебя? 😊", "Супер! Работаю! ⚡", "Нормально! 😎"],
 
-    "хорошо": ["Рад за тебя! 😊", "Круто! Так держать! ", "Отлично! Я тоже в порядке!"],
+    "хорошо": ["Рад за тебя! 😊", "Круто! ", "Отлично!"],
 
-    "круто": ["Ага, круто! 😎", "Согласен! ", "Ещё бы! 😄"],
+    "круто": ["Ага, круто! ", "Согласен! ", "Ещё бы! 😄"],
+    "спасибо": ["Пожалуйста! 😊", "Всегда рад! ", "Не за что!"],
 
-    "плохо": ["Ох, сочувствую... 😔 Всё наладится!", "Держись! 💪 Расскажешь что случилось?", "Жаль... Хочешь поговорить об этом?"],
+    "плохо": ["Сочувствую... 😔 Всё наладится!", "Держись! 💪"],
 
-    "грустно": ["Понимаю... 😔 Может музыка поможет? /music", "Не грусти! Всё будет хорошо! 💙", "Обнимаю! 🤗 Всё наладится!"],
-
-    "устал": ["Отдохни!  Ты заслужил!", "Понимаю... Работа - не волк! 😄", "Сил тебе! 💪 Отдыхай!"],
-
-    "бесит": ["Понимаю... 😤 Иногда тоже бесит всё!", "Ох, знакомое чувство... 😤", "Держись! 💪 Не нервничай!"],
-    "злюсь": ["Выпусти пар! 😤 Может музыку включить? /music", "Понимаю... Не кипишуй! 😎 Всё решится!"],
-
-    "вау": ["Да! 😲 Круто же!", "Сам в шоке! 😄", "Правда круто! 🔥"],
-
-    "ого": ["Вот это да! 😲", "Не ожидал! 😄", "Да, неожиданно!"],
-
-    "люблю": ["Взаимно! ❤️", "Ох, польщён! 😊❤️", "И я тебя! 💙"],
-
-    "ты лучший": ["Спасибо! 😊 Ты тоже крутой!", "Ох, спасибо! 💙", "Стараюсь! 😎"],
-
-    "скучно": ["Давай поболтаем! 😊 О чём хочешь?", "Не скучай! 😄 Может музыку? /music", "Понимаю... Давай что-нибудь придумаем!"],
-
-    "нечего делать": ["Закажи музыку! /music 🎵", "Посмотри картинки! /img коты 😄", "Найди видео! /video смешное 😄"],
+    "грустно": ["Понимаю... 😔 Может музыку? /music", "Не грусти! 💙"],
 
 }
 
@@ -73,17 +163,11 @@ INTELLIGENCE = {
 
     "10 * 10": "100",
 
-    "сколько будет": "Хм... давай посчитаю... 🤔",
+    "путин": "Владимир Путин - президент России с 2012 года.",
 
-    "кто такой путин": "Владимир Путин - президент России с 2012 года.",
+    "кто ты": "Я Cho Второй - твой AI-помощник! 😊",
 
-    "что такое ии": "ИИ (AI) - искусственный интеллект, компьютеры которые 'думают'.",
-
-    "что такое мем": "Мем - смешная картинка или фраза которая стала популярной в интернете! 😄",
-
-    "кто ты": ["Я Cho Второй - твой AI-помощник! 😊", "Я бот который помогает с музыкой, видео и картинками!", "Я Cho Второй! Всегда на связи! 💙"],
-
-    "что умеешь": "Умею:\n🎵 /music - искать музыку\n /video - искать видео\n🖼️ /img - искать картинки\n📚 /wiki - искать информацию",
+    "что умеешь": "Умею:\n🎵 /music - музыка\n /video - видео\n🖼️ /img - картинки\n📚 /wiki - информация",
 
 }
 
@@ -91,16 +175,13 @@ INTELLIGENCE = {
 
 CONVERSATION = [
 
-    "Интересно... Расскажи подробнее! 😊",
+    "Интересно! 😊",
 
-    "Понимаю тебя! 💭",
+    "Понимаю! 💭",
 
     "Да, бывает! 😄",
+
     "Круто! 🔥",
-
-    "Расскажи ещё!",
-
-    "Я слушаю... 👂",
 
     "Хм... ",
 
@@ -110,50 +191,77 @@ CONVERSATION = [
 
 
 
-def get_emotional_response(text):
+def is_family(username):
 
-    text = text.lower().strip()
+    """Проверяет является ли пользователь семьёй"""
+    if not username:
 
-    for emotion, responses in EMOTIONAL_RESPONSES.items():
+        return False
 
-        if emotion in text:
-
-            return random.choice(responses)
-
-    for question, answer in INTELLIGENCE.items():
-
-        if question in text:
-
-            if isinstance(answer, list):
-
-                return random.choice(answer)
-
-            return answer
-
-    return random.choice(CONVERSATION)
+    return username.lower() in CREATORS
 
 
 
-def detect_mood(text):
+def is_insult(text):
+
+    """Проверяет есть ли в сообщении оскорбление или мат"""
 
     text = text.lower()
 
-    if any(word in text for word in ["привет", "хорошо", "круто", "отлично"]):
+    for insult in INSULTS:
 
-        return "весёлый"
+        if insult in text:
 
-    elif any(word in text for word in ["плохо", "грустно", "устал"]):
+            return True
 
-        return "грустный"
-    elif any(word in text for word in ["бесит", "злюсь", "ненавижу"]):
+    return False
 
-        return "злой"
 
-    elif any(word in text for word in ["вау", "ого", "невероятно"]):
 
-        return "удивлённый"
+def get_response(text, username):
 
-    return "спокойный"
+    text_lower = text.lower().strip()
+
+    
+
+    # ЕСЛИ ОСКОРБЛЕНИЕ И НЕ СЕМЬЯ - ЖЁСТКО МАТЕРИМСЯ
+
+    if is_insult(text) and not is_family(username):
+
+        # 70% шанс мата, 30% шанс роаста
+
+        if random.random() < 0.7:
+
+            return random.choice(SWEAR_RESPONSES)
+
+        else:
+
+            return random.choice(ROAST_RESPONSES)
+
+    
+
+    # СНАЧАЛА ИНТЕЛЛЕКТ
+
+    for question, answer in INTELLIGENCE.items():
+        if question in text_lower:
+
+            return answer
+
+    
+
+    # ПОТОМ ЭМОЦИИ
+
+    for emotion, responses in EMOTIONAL_RESPONSES.items():
+
+        if emotion in text_lower:
+
+            return random.choice(responses)
+
+    
+
+    # СЛУЧАЙНАЯ ФРАЗА
+
+    return random.choice(CONVERSATION)
 
 
 
@@ -184,16 +292,24 @@ def should_respond(message, bot_id):
     return False
 
 
-
 async def cmd_start(message):
 
-    responses = ["Привет! Я Cho Второй! 😊", "Привет-привет! 👋", "О, привет! Рад видеть! 😄"]
+    username = message.from_user.username
 
-    await message.answer(random.choice(responses))
+    if is_family(username):
+
+        role = CREATORS.get(username.lower(), "")
+
+        await message.answer(f"Привет, {role}! 😊❤️")
+
+    else:
+
+        await message.answer("Привет! Я Cho Второй! 😊")
 
 
 
 async def cmd_img(message):
+
     words = message.text.split(" ", 1)
 
     if len(words) < 2:
@@ -225,7 +341,6 @@ async def cmd_music(message):
         return
 
     query = words[1].strip()
-
     await message.answer("🎵 Ищу музыку...")
 
     short_query = query.replace(" ", "+")
@@ -243,6 +358,7 @@ async def cmd_video(message):
     if len(words) < 2:
 
         await message.answer("Напиши что найти! Пример: /video котики")
+
         return
 
     query = words[1].strip()
@@ -274,7 +390,6 @@ async def cmd_wiki(message):
     short_query = query.replace(" ", "+")
 
     fandom_url = "https://fandom.com/search?q=" + short_query
-
     wiki_url = "https://ru.wikipedia.org/wiki/Служебная:Поиск?search=" + short_query
 
     msg = "Поиск:\n\nFandom: " + fandom_url + "\n\nWikipedia: " + wiki_url
@@ -292,6 +407,7 @@ async def on_message(message):
         bot_id = me.id
 
     except Exception as e:
+
         print(f"DEBUG: get_me error: {e}")
 
         return
@@ -306,11 +422,9 @@ async def on_message(message):
 
     await asyncio.sleep(1.5)
 
-    global current_mood
+    username = message.from_user.username
 
-    current_mood = detect_mood(message.text)
-
-    response = get_emotional_response(message.text)
+    response = get_response(message.text, username)
 
     await thinking.delete()
 
@@ -325,7 +439,6 @@ def register_handlers():
     dp.message(Command("img"))(cmd_img)
 
     dp.message(Command("music"))(cmd_music)
-
     dp.message(Command("video"))(cmd_video)
 
     dp.message(Command("wiki"))(cmd_wiki)
@@ -339,6 +452,7 @@ def register_handlers():
 def index():
 
     return "OK"
+
 
 
 @app.route("/health")
@@ -374,12 +488,13 @@ async def polling_with_restart():
             await asyncio.sleep(5)
 
 
-
 if __name__ == "__main__":
 
     register_handlers()
 
     print("DEBUG: бот запускается...")
+
+    print(f"DEBUG: Family members: {list(CREATORS.keys())}")
 
     t = threading.Thread(target=start_web, daemon=True)
 
